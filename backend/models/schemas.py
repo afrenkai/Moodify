@@ -14,7 +14,6 @@ class EmotionType(str, Enum):
     ROMANTIC = "romantic"
     ANXIOUS = "anxious"
     PEACEFUL = "peaceful"
-    # Extended emotions
     TIRED = "tired"
     CONFIDENT = "confident"
     REBELLIOUS = "rebellious"
@@ -39,10 +38,19 @@ class SongInput(BaseModel):
     spotify_id: Optional[str] = Field(None, description="Spotify track ID if available")
 
 
+class ArtistInput(BaseModel):
+    artist_name: str = Field(..., description="Name of the artist")
+    spotify_id: Optional[str] = Field(None, description="Spotify artist ID if available")
+
+
 class PlaylistRequest(BaseModel):
     songs: Optional[List[SongInput]] = Field(
         None,
         description="List of user input songs for embedding-based search"
+    )
+    artists: Optional[List[ArtistInput]] = Field(
+        None,
+        description="List of user input artists - we'll use their top tracks for embedding-based search"
     )
     emotion: Optional[List[str]] = Field(
         None,
@@ -95,7 +103,6 @@ class HealthResponse(BaseModel):
 
 
 class SpotifyTrackInfo(BaseModel):
-    """Detailed Spotify track information."""
     spotify_id: str
     song_name: str
     artist: str
@@ -108,14 +115,21 @@ class SpotifyTrackInfo(BaseModel):
 
 
 class SpotifyRecommendationsRequest(BaseModel):
-    """Request for Spotify recommendations."""
     seed_tracks: Optional[List[str]] = Field(None, description="List of track IDs (max 5)")
     emotion: Optional[str] = Field(None, description="Emotion for feature targets")
     num_results: int = Field(20, ge=1, le=50, description="Number of recommendations")
 
 
 class SpotifySearchRequest(BaseModel):
-    """Request for Spotify track search."""
     song_name: str = Field(..., description="Song name to search")
     artist: Optional[str] = Field(None, description="Artist name for more accurate search")
+
+
+class SpotifyArtistInfo(BaseModel):
+    spotify_id: str
+    name: str
+    genres: List[str] = Field(default_factory=list)
+    popularity: int
+    image_url: Optional[str] = None
+    external_url: str
 
