@@ -214,21 +214,11 @@ class EmotionMapper:
         emotion: str,
         tolerance: float = 0.1
     ) -> bool:
-        
-        feature_ranges = self.get_feature_ranges(emotion)
-        
-        for feature, (min_val, max_val) in feature_ranges.items():
-            if feature not in audio_features:
-                continue
-            
-        
-            min_val -= tolerance
-            max_val += tolerance
-            
-            value = audio_features[feature]
-            if not (min_val <= value <= max_val):
-                return False
-        
+        """
+        DEPRECATED: Audio features are no longer used.
+        Returns True for all inputs (deprecated functionality).
+        """
+        logger.warning("matches_emotion is deprecated - audio features no longer used")
         return True
     
     def compute_emotion_score(
@@ -237,57 +227,11 @@ class EmotionMapper:
         emotion: str
     ) -> float:
         """
-        Compute how well audio features match an emotion.
-        If LLM is enabled, uses contextual understanding; otherwise uses range matching.
+        DEPRECATED: Audio features are no longer used.
+        Returns neutral score (deprecated functionality).
         """
-        # Use LLM-based inference if available
-        if self.use_llm and self.llm_emotion_service:
-            try:
-                # Get emotion inference from audio features
-                emotion_scores = self.llm_emotion_service.infer_emotion_from_audio_features(
-                    audio_features,
-                    candidates=[emotion.lower().strip()]
-                )
-                if emotion_scores:
-                    _, score = emotion_scores[0]
-                    logger.debug(f"LLM emotion score for '{emotion}': {score:.3f}")
-                    return score
-            except Exception as e:
-                logger.warning(f"LLM emotion scoring failed: {e}, falling back to range-based")
-        
-        # Fallback to range-based scoring
-        feature_ranges = self.get_feature_ranges(emotion)
-        
-        if not feature_ranges:
-            return 0.5  
-        
-        scores = []
-        for feature, (min_val, max_val) in feature_ranges.items():
-            if feature not in audio_features:
-                continue
-            
-            value = audio_features[feature]
-            
-            # Score based on how well the value fits within the range
-            if min_val <= value <= max_val:
-                range_size = max_val - min_val
-                if range_size > 0:
-                    center = (min_val + max_val) / 2
-                    distance_from_center = abs(value - center)
-                    score = 1.0 - (distance_from_center / (range_size / 2))
-                else:
-                    score = 1.0
-            else:
-                if value < min_val:
-                    distance = min_val - value
-                else:
-                    distance = value - max_val
-                
-                score = max(0.0, 1.0 - distance)
-            
-            scores.append(score)
-        
-        return sum(scores) / len(scores) if scores else 0.5
+        logger.warning("compute_emotion_score is deprecated - audio features no longer used")
+        return 0.5  # Neutral score since audio features deprecated
     
     def analyze_emotions(self, emotions: list) -> dict:
         """

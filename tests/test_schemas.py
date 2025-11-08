@@ -5,7 +5,6 @@ from backend.models.schemas import (
     EmotionType,
     SongInput,
     PlaylistRequest,
-    AudioFeatures,
     SongResult,
     MoodCollage,
     PlaylistResponse,
@@ -164,82 +163,7 @@ class TestPlaylistRequest:
         assert request.enrich_with_lyrics is True
 
 
-class TestAudioFeatures:
-    """Test suite for AudioFeatures schema."""
-    
-    def test_audio_features_valid(self):
-        """Test creating valid AudioFeatures."""
-        features = AudioFeatures(
-            valence=0.7,
-            energy=0.8,
-            danceability=0.6,
-            tempo=120.0,
-            acousticness=0.3,
-            instrumentalness=0.1,
-            liveness=0.2,
-            speechiness=0.1
-        )
-        
-        assert features.valence == 0.7
-        assert features.energy == 0.8
-        assert features.tempo == 120.0
-    
-    def test_audio_features_range_validation(self):
-        """Test that audio features are validated to be in [0, 1] range."""
-        # Valid values
-        features = AudioFeatures(
-            valence=0.0,
-            energy=1.0,
-            danceability=0.5,
-            tempo=100.0,
-            acousticness=0.0,
-            instrumentalness=1.0,
-            liveness=0.0,
-            speechiness=1.0
-        )
-        
-        assert features.valence == 0.0
-        assert features.energy == 1.0
-        
-        # Invalid values (out of range)
-        with pytest.raises(ValidationError):
-            AudioFeatures(
-                valence=1.5,  # Over 1.0
-                energy=0.8,
-                danceability=0.6,
-                tempo=120.0,
-                acousticness=0.3,
-                instrumentalness=0.1,
-                liveness=0.2,
-                speechiness=0.1
-            )
-        
-        with pytest.raises(ValidationError):
-            AudioFeatures(
-                valence=0.7,
-                energy=-0.1,  # Below 0.0
-                danceability=0.6,
-                tempo=120.0,
-                acousticness=0.3,
-                instrumentalness=0.1,
-                liveness=0.2,
-                speechiness=0.1
-            )
-    
-    def test_audio_features_tempo_positive(self):
-        """Test that tempo can be any positive value."""
-        features = AudioFeatures(
-            valence=0.5,
-            energy=0.5,
-            danceability=0.5,
-            tempo=200.0,  # High tempo
-            acousticness=0.5,
-            instrumentalness=0.5,
-            liveness=0.5,
-            speechiness=0.5
-        )
-        
-        assert features.tempo == 200.0
+# Removed TestAudioFeatures class - audio features are deprecated
 
 
 class TestSongResult:
@@ -258,24 +182,12 @@ class TestSongResult:
         assert song.similarity_score == 0.85
     
     def test_song_result_with_all_fields(self):
-        """Test SongResult with all fields."""
-        audio_features = AudioFeatures(
-            valence=0.7,
-            energy=0.8,
-            danceability=0.6,
-            tempo=120.0,
-            acousticness=0.3,
-            instrumentalness=0.1,
-            liveness=0.2,
-            speechiness=0.1
-        )
-        
+        """Test SongResult with all fields (without audio features - deprecated)."""
         song = SongResult(
             song_name="Complete Song",
             artist="Complete Artist",
             spotify_id="track123",
             similarity_score=0.92,
-            audio_features=audio_features,
             album="Test Album",
             preview_url="https://preview.url",
             external_url="https://spotify.url",
@@ -479,22 +391,12 @@ class TestSchemaValidation:
                 SongResult(
                     song_name="Test",
                     artist="Artist",
-                    similarity_score=0.9,
-                    audio_features=AudioFeatures(
-                        valence=0.7,
-                        energy=0.8,
-                        danceability=0.6,
-                        tempo=120.0,
-                        acousticness=0.3,
-                        instrumentalness=0.1,
-                        liveness=0.2,
-                        speechiness=0.1
-                    )
+                    similarity_score=0.9
                 )
             ]
         )
         
-        assert response.playlist[0].audio_features.valence == 0.7
+        assert response.playlist[0].similarity_score == 0.9
     
     def test_json_serialization(self):
         """Test that schemas can be serialized to JSON."""
@@ -517,10 +419,8 @@ class TestSchemaValidation:
             artist="Artist",
             similarity_score=0.9,
             spotify_id=None,
-            audio_features=None,
             album=None
         )
         
         assert song.spotify_id is None
-        assert song.audio_features is None
         assert song.album is None

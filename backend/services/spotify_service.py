@@ -96,41 +96,16 @@ class SpotifyService:
             logger.error(f"Error getting track by ID: {e}")
             return None
     
-    def get_audio_features(self, track_id: str) -> Optional[Dict[str, float]]:
-        """
-        Get audio features for a track.
-        
-        Args:
-            track_id: Spotify track ID
-            
-        Returns:
-            Audio features dict or None if not found
-        """
-        if not self.is_available():
-            return None
-        
-        try:
-            features = self.spotify.audio_features(track_id)
-            if features and features[0]:
-                return self._format_audio_features(features[0])
-            return None
-        except Exception as e:
-            logger.error(f"Error getting audio features: {e}")
-            return None
-    
     def get_recommendations(
         self,
         seed_tracks: Optional[List[str]] = None,
         seed_artists: Optional[List[str]] = None,
         seed_genres: Optional[List[str]] = None,
         limit: int = 20,
-        target_valence: Optional[float] = None,
-        target_energy: Optional[float] = None,
-        target_danceability: Optional[float] = None,
         **kwargs
     ) -> List[Dict[str, Any]]:
         """
-        Get track recommendations based on seeds and target audio features.
+        Get track recommendations based on seeds.
         
         NOTE: Spotify recommendations API has been deprecated and is no longer available.
         This method now returns an empty list. Use search_by_multiple_queries instead.
@@ -140,10 +115,7 @@ class SpotifyService:
             seed_artists: List of artist IDs (max 5)
             seed_genres: List of genres (max 5)
             limit: Number of recommendations
-            target_valence: Target valence (0-1)
-            target_energy: Target energy (0-1)
-            target_danceability: Target danceability (0-1)
-            **kwargs: Additional target audio features
+            **kwargs: Additional parameters (ignored)
             
         Returns:
             Empty list (API deprecated)
@@ -300,35 +272,38 @@ class SpotifyService:
         track_ids: List[str]
     ) -> List[Dict[str, Any]]:
         """
-        Get multiple tracks with their audio features.
+        Get multiple tracks.
+        Handles batching to avoid Spotify's 100 ID limit.
         
         Args:
             track_ids: List of Spotify track IDs
             
         Returns:
-            List of tracks with audio features
+            List of tracks
         """
         if not self.is_available():
             return []
         
         try:
-            # Get tracks info
-            tracks = self.spotify.tracks(track_ids)
+            # Spotify API limits to 50-100 IDs per request, use 50 to be safe
+            batch_size = 50
+            all_results = []
             
-            # Get audio features for all tracks
-            features = self.spotify.audio_features(track_ids)
+            for i in range(0, len(track_ids), batch_size):
+                batch_ids = track_ids[i:i + batch_size]
+                
+                # Get tracks info
+                tracks = self.spotify.tracks(batch_ids)
+                
+                for track in tracks['tracks']:
+                    if track:
+                        track_data = self._format_track(track)
+                        all_results.append(track_data)
             
-            result = []
-            for track, feature in zip(tracks['tracks'], features):
-                if track and feature:
-                    track_data = self._format_track(track)
-                    track_data['audio_features'] = self._format_audio_features(feature)
-                    result.append(track_data)
-            
-            return result
+            return all_results
             
         except Exception as e:
-            logger.error(f"Error getting tracks with features: {e}")
+            logger.error(f"Error getting tracks: {e}")
             return []
     
     def _format_track(self, track: Dict[str, Any]) -> Dict[str, Any]:
@@ -345,17 +320,4 @@ class SpotifyService:
             'duration_ms': track['duration_ms'],
             'popularity': track.get('popularity', 0),
             'album_image': track['album']['images'][0]['url'] if track['album']['images'] else None
-        }
-    
-    def _format_audio_features(self, features: Dict[str, Any]) -> Dict[str, float]:
-        """Format audio features to our schema."""
-        return {
-            'valence': features.get('valence', 0.5),
-            'energy': features.get('energy', 0.5),
-            'danceability': features.get('danceability', 0.5),
-            'tempo': features.get('tempo', 120.0),
-            'acousticness': features.get('acousticness', 0.5),
-            'instrumentalness': features.get('instrumentalness', 0.0),
-            'liveness': features.get('liveness', 0.5),
-            'speechiness': features.get('speechiness', 0.5)
         }

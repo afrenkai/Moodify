@@ -8,7 +8,7 @@ from backend.services.embedding_service import EmbeddingService
 from backend.services.emotion_mapper import EmotionMapper
 from backend.services.spotify_service import SpotifyService
 from backend.services.playlist_generator import PlaylistGenerator
-from backend.models.schemas import SongInput, AudioFeatures
+from backend.models.schemas import SongInput
 
 
 @pytest.fixture
@@ -40,18 +40,6 @@ def mock_spotify_service():
         'album_image': 'https://test.com/image.jpg'
     }
     
-    # Mock get_audio_features
-    mock_service.get_audio_features.return_value = {
-        'valence': 0.7,
-        'energy': 0.8,
-        'danceability': 0.6,
-        'tempo': 120.0,
-        'acousticness': 0.3,
-        'instrumentalness': 0.1,
-        'liveness': 0.2,
-        'speechiness': 0.1
-    }
-    
     # Mock search_by_multiple_queries
     mock_service.search_by_multiple_queries.return_value = [
         {
@@ -79,17 +67,7 @@ def mock_spotify_service():
             'external_url': f'https://spotify.com/track/{i}',
             'duration_ms': 200000 + i * 1000,
             'popularity': 70 + i,
-            'album_image': f'https://test.com/image{i}.jpg',
-            'audio_features': {
-                'valence': 0.5 + i * 0.05,
-                'energy': 0.6 + i * 0.03,
-                'danceability': 0.5 + i * 0.04,
-                'tempo': 110.0 + i * 5,
-                'acousticness': 0.3,
-                'instrumentalness': 0.1,
-                'liveness': 0.2,
-                'speechiness': 0.1
-            }
+            'album_image': f'https://test.com/image{i}.jpg'
         }
         for i in range(10)
     ]
@@ -115,21 +93,6 @@ def sample_song_inputs():
         SongInput(song_name="Imagine", artist="John Lennon"),
         SongInput(song_name="Hotel California", artist="Eagles")
     ]
-
-
-@pytest.fixture
-def sample_audio_features():
-    """Create sample AudioFeatures for testing."""
-    return AudioFeatures(
-        valence=0.7,
-        energy=0.8,
-        danceability=0.6,
-        tempo=120.0,
-        acousticness=0.3,
-        instrumentalness=0.1,
-        liveness=0.2,
-        speechiness=0.1
-    )
 
 
 @pytest.fixture
@@ -192,16 +155,6 @@ def test_client_with_mock_services():
         'duration_ms': 200000,
         'popularity': 80,
         'album_image': 'https://test.image'
-    }
-    mock_spotify.get_audio_features.return_value = {
-        'valence': 0.7,
-        'energy': 0.8,
-        'danceability': 0.6,
-        'tempo': 120.0,
-        'acousticness': 0.3,
-        'instrumentalness': 0.1,
-        'liveness': 0.2,
-        'speechiness': 0.1
     }
     
     mock_genius = Mock()

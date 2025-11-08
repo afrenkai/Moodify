@@ -10,6 +10,7 @@ import { getEmotionColor } from '@/lib/spotify-utils';
 import EmotionSelector from '@/components/EmotionSelector';
 import PlaylistDisplay from '@/components/PlaylistDisplay';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import SongAutocomplete from '@/components/SongAutocomplete';
 
 const DEFAULT_EMOTIONS = [
 	'happy',
@@ -27,6 +28,7 @@ const DEFAULT_EMOTIONS = [
 interface SeedSong {
 	song_name: string;
 	artist: string;
+	spotify_id?: string;
 }
 
 export default function Home() {
@@ -37,8 +39,6 @@ export default function Home() {
 	const [playlistData, setPlaylistData] = useState<PlaylistGenerationResponse | null>(null);
 	const [numTracks, setNumTracks] = useState(20);
 	const [seedSongs, setSeedSongs] = useState<SeedSong[]>([]);
-	const [currentSongName, setCurrentSongName] = useState('');
-	const [currentArtist, setCurrentArtist] = useState('');
 	const [generationMode, setGenerationMode] = useState<'emotion' | 'songs' | 'both'>('emotion');
 
 	// Fetch available emotions on mount
@@ -52,11 +52,13 @@ export default function Home() {
 			});
 	}, []);
 
-	const addSeedSong = () => {
-		if (currentSongName.trim() && currentArtist.trim()) {
-			setSeedSongs([...seedSongs, { song_name: currentSongName, artist: currentArtist }]);
-			setCurrentSongName('');
-			setCurrentArtist('');
+	const addSeedSong = (song: SeedSong) => {
+		// Avoid duplicates
+		const isDuplicate = seedSongs.some(
+			s => s.song_name === song.song_name && s.artist === song.artist
+		);
+		if (!isDuplicate) {
+			setSeedSongs([...seedSongs, song]);
 		}
 	};
 
@@ -184,31 +186,12 @@ export default function Home() {
 								Add Seed Songs
 							</h3>
 							<div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
-								{/* Input fields */}
-								<div className="flex flex-col sm:flex-row gap-3 mb-4">
-									<input
-										type="text"
-										placeholder="Song name"
-										value={currentSongName}
-										onChange={(e) => setCurrentSongName(e.target.value)}
-										onKeyPress={(e) => e.key === 'Enter' && addSeedSong()}
-										className="flex-1 px-4 py-3 rounded-lg bg-white/10 text-white border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-zinc-500"
+								{/* Autocomplete Input */}
+								<div className="mb-4">
+									<SongAutocomplete
+										onSelectSong={addSeedSong}
+										placeholder="Search for a song to add..."
 									/>
-									<input
-										type="text"
-										placeholder="Artist"
-										value={currentArtist}
-										onChange={(e) => setCurrentArtist(e.target.value)}
-										onKeyPress={(e) => e.key === 'Enter' && addSeedSong()}
-										className="flex-1 px-4 py-3 rounded-lg bg-white/10 text-white border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-zinc-500"
-									/>
-									<button
-										onClick={addSeedSong}
-										disabled={!currentSongName.trim() || !currentArtist.trim()}
-										className="px-6 py-3 rounded-lg bg-green-500 text-black font-semibold hover:bg-green-400 disabled:bg-zinc-700 disabled:text-zinc-500 disabled:cursor-not-allowed transition-all"
-									>
-										Add Song
-									</button>
 								</div>
 
 								{/* Seed songs list */}
@@ -236,7 +219,7 @@ export default function Home() {
 
 								{seedSongs.length === 0 && (
 									<div className="text-center text-zinc-500 py-4">
-										No seed songs added yet. Add some to get started!
+										No seed songs added yet. Search and select songs to get started!
 									</div>
 								)}
 							</div>
@@ -403,7 +386,9 @@ export default function Home() {
 							Ready to discover your soundtrack?
 						</h3>
 						<p className="text-zinc-400">
-							Select an emotion above and generate your personalized playlist
+							{generationMode === 'emotion' && 'Select emotion(s) above and generate your personalized playlist'}
+							{generationMode === 'songs' && 'Add some seed songs above and generate your personalized playlist'}
+							{generationMode === 'both' && 'Select emotion(s) and add seed songs above to generate your personalized playlist'}
 						</p>
 					</div>
 				)}

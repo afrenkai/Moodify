@@ -132,9 +132,10 @@ async def list_emotions():
 async def search_spotify_track(
     song_name: str,
     artist: Optional[str] = None,
+    limit: int = 10,
     request: Request = None
 ):
-    """Search for a track on Spotify by name and optional artist."""
+    """Search for tracks on Spotify by name and optional artist."""
     try:
         spotify_service = request.app.state.spotify_service
         
@@ -144,15 +145,21 @@ async def search_spotify_track(
                 detail="Spotify service is not available. Check credentials."
             )
         
-        track = spotify_service.search_track(song_name, artist, limit=1)
+        # Search using the Spotify API
+        query = f"track:{song_name}"
+        if artist:
+            query += f" artist:{artist}"
         
-        if not track:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Track not found: {song_name} by {artist}"
-            )
+        results = spotify_service.spotify.search(q=query, type='track', limit=min(limit, 50))
         
-        return track
+        if not results['tracks']['items']:
+            return {"tracks": []}
+        
+        tracks = []
+        for track in results['tracks']['items']:
+            tracks.append(spotify_service._format_track(track))
+        
+        return {"tracks": tracks}
         
     except HTTPException:
         raise
@@ -185,35 +192,6 @@ async def get_spotify_track(track_id: str, request: Request):
     except Exception as e:
         logger.error(f"Error getting track: {e}")
         raise HTTPException(status_code=500, detail="Failed to get track")
-
-
-@router.get("/spotify/audio-features/{track_id}")
-async def get_audio_features(track_id: str, request: Request):
-    """Get audio features for a Spotify track."""
-    try:
-        spotify_service = request.app.state.spotify_service
-        
-        if not spotify_service.is_available():
-            raise HTTPException(
-                status_code=503,
-                detail="Spotify service is not available"
-            )
-        
-        features = spotify_service.get_audio_features(track_id)
-        
-        if not features:
-            raise HTTPException(
-                status_code=404,
-                detail="Audio features not found"
-            )
-        
-        return features
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error getting audio features: {e}")
-        raise HTTPException(status_code=500, detail="Failed to get audio features")
 
 
 @router.post("/spotify/recommendations")

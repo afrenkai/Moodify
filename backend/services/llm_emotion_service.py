@@ -208,72 +208,20 @@ class LLMEmotionService:
         candidates: Optional[List[str]] = None
     ) -> List[Tuple[str, float]]:
         """
-        Infer what emotions match given audio features using contextual understanding.
+        DEPRECATED: Audio features are no longer used.
+        Returns neutral scores for all candidates.
         
         Args:
-            audio_features: Dictionary of Spotify audio features
+            audio_features: Dictionary of Spotify audio features (ignored)
             candidates: Optional list of candidate emotions to rank
             
         Returns:
-            List of (emotion, score) tuples ranked by match
+            List of (emotion, 0.5) tuples with neutral scores
         """
+        logger.warning("infer_emotion_from_audio_features is deprecated - audio features no longer used")
         if candidates is None:
             candidates = list(self.emotion_embeddings.keys())
-        
-        # Create descriptive text from audio features
-        descriptions = []
-        
-        if 'valence' in audio_features:
-            valence = audio_features['valence']
-            if valence > 0.7:
-                descriptions.append("very positive and uplifting")
-            elif valence > 0.5:
-                descriptions.append("somewhat positive")
-            elif valence < 0.3:
-                descriptions.append("dark and negative")
-        
-        if 'energy' in audio_features:
-            energy = audio_features['energy']
-            if energy > 0.7:
-                descriptions.append("high energy and intense")
-            elif energy < 0.3:
-                descriptions.append("low energy and subdued")
-        
-        if 'danceability' in audio_features:
-            dance = audio_features['danceability']
-            if dance > 0.7:
-                descriptions.append("very danceable and rhythmic")
-        
-        if 'acousticness' in audio_features:
-            acoustic = audio_features['acousticness']
-            if acoustic > 0.7:
-                descriptions.append("acoustic and organic")
-        
-        if 'tempo' in audio_features:
-            tempo = audio_features['tempo']
-            if tempo > 140:
-                descriptions.append("fast-paced")
-            elif tempo < 80:
-                descriptions.append("slow tempo")
-        
-        if not descriptions:
-            return [(e, 0.5) for e in candidates]
-        
-        # Combine descriptions
-        feature_text = "music that is " + ", ".join(descriptions)
-        
-        # Score against each candidate emotion
-        scores = []
-        for emotion in candidates:
-            score = self.compute_emotion_similarity(
-                feature_text,
-                emotion,
-                context="description"
-            )
-            scores.append((emotion, score))
-        
-        scores.sort(key=lambda x: x[1], reverse=True)
-        return scores
+        return [(e, 0.5) for e in candidates]
     
     def get_audio_feature_guidance(
         self,
@@ -281,110 +229,18 @@ class LLMEmotionService:
         confidence: float = 0.7
     ) -> Dict[str, Tuple[float, float]]:
         """
-        Get suggested audio feature ranges for an emotion using learned patterns.
-        This provides guidance but isn't strictly enforced.
+        DEPRECATED: Audio features are no longer used.
+        Returns empty dict (deprecated functionality).
         
         Args:
             emotion: Target emotion
             confidence: How strict the ranges should be (0-1)
             
         Returns:
-            Dictionary of feature ranges
+            Empty dictionary (deprecated)
         """
-        emotion_lower = emotion.lower().strip()
-        
-        # Create contextual descriptions of audio characteristics
-        emotion_audio_profiles = {
-            "happy": {
-                "valence": (0.6, 1.0),
-                "energy": (0.5, 1.0),
-                "danceability": (0.5, 1.0),
-            },
-            "sad": {
-                "valence": (0.0, 0.4),
-                "energy": (0.0, 0.5),
-            },
-            "energetic": {
-                "energy": (0.7, 1.0),
-                "danceability": (0.6, 1.0),
-            },
-            "calm": {
-                "energy": (0.0, 0.4),
-                "acousticness": (0.4, 1.0),
-            },
-            "angry": {
-                "valence": (0.0, 0.3),
-                "energy": (0.7, 1.0),
-            },
-            "melancholic": {
-                "valence": (0.0, 0.4),
-                "energy": (0.2, 0.5),
-            },
-            "hopeful": {
-                "valence": (0.4, 0.8),
-                "energy": (0.4, 0.7),
-            },
-            "romantic": {
-                "valence": (0.4, 0.8),
-                "energy": (0.2, 0.6),
-            },
-            "anxious": {
-                "valence": (0.2, 0.5),
-                "energy": (0.5, 0.9),
-            },
-            "peaceful": {
-                "valence": (0.4, 0.8),
-                "energy": (0.0, 0.3),
-            }
-        }
-        
-        if emotion_lower in emotion_audio_profiles:
-            base_ranges = emotion_audio_profiles[emotion_lower]
-        else:
-            # For unknown emotions, find similar ones
-            related = self.find_related_emotions(emotion_lower, top_k=2)
-            if related:
-                # Blend the ranges from similar emotions
-                base_ranges = {}
-                for rel_emotion, similarity in related:
-                    if rel_emotion in emotion_audio_profiles:
-                        for feature, (min_val, max_val) in emotion_audio_profiles[rel_emotion].items():
-                            if feature not in base_ranges:
-                                base_ranges[feature] = [[], []]
-                            base_ranges[feature][0].append(min_val * similarity)
-                            base_ranges[feature][1].append(max_val * similarity)
-                
-                # Average the ranges
-                base_ranges = {
-                    feature: (
-                        sum(vals[0]) / len(vals[0]),
-                        sum(vals[1]) / len(vals[1])
-                    )
-                    for feature, vals in base_ranges.items()
-                }
-            else:
-                # Default neutral ranges
-                base_ranges = {
-                    "valence": (0.3, 0.7),
-                    "energy": (0.3, 0.7),
-                }
-        
-        # Adjust ranges based on confidence
-        # Lower confidence = wider ranges
-        adjusted_ranges = {}
-        for feature, (min_val, max_val) in base_ranges.items():
-            center = (min_val + max_val) / 2
-            spread = (max_val - min_val) / 2
-            
-            # Scale spread inversely with confidence
-            adjusted_spread = spread / confidence
-            
-            adjusted_ranges[feature] = (
-                max(0.0, center - adjusted_spread),
-                min(1.0, center + adjusted_spread)
-            )
-        
-        return adjusted_ranges
+        logger.warning("get_audio_feature_guidance is deprecated - audio features no longer used")
+        return {}
     
     def analyze_multi_emotion_query(
         self,
