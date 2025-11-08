@@ -1,0 +1,26 @@
+# Core API Framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.4.0
+
+# Machine Learning & Embeddings
+sentence-transformers>=2.2.0
+numpy>=1.24.0
+pandas>=2.0.0
+scikit-learn>=1.3.0
+
+# Image Generation
+pillow>=10.0.0
+
+# Music APIs
+spotipy>=2.23.0
+
+# Utilities
+python-dotenv>=1.0.0
+
+# Development (optional)
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+httpx>=0.25.0
+black>=23.0.0
+ruff>=0.1.0
