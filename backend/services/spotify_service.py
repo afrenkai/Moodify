@@ -10,10 +10,7 @@ load_dotenv()
 
 
 class SpotifyService:
-    """Service for interacting with Spotify API using Spotipy."""
-    
     def __init__(self):
-        """Initialize Spotify client with credentials from environment."""
         try:
             client_id = os.getenv('SPOTIFY_CLIENT_ID')
             client_secret = os.getenv('SPOTIFY_CLIENT_SECRET')
@@ -34,23 +31,14 @@ class SpotifyService:
             self.spotify = None
     
     def is_available(self) -> bool:
-        """Check if Spotify service is available."""
         return self.spotify is not None
     
     def get_available_genre_seeds(self) -> List[str]:
-        """
-        Get all available genre seeds from Spotify.
-        These are the genres that can be used in search queries.
-        
-        Returns:
-            List of genre strings
-        """
         if not self.is_available():
             logger.warning("Spotify service not available")
             return []
         
         try:
-            # Spotify provides a list of available genre seeds
             genres = self.spotify.recommendation_genre_seeds()
             logger.info(f"Retrieved {len(genres)} available genre seeds from Spotify")
             return genres.get('genres', [])
@@ -58,23 +46,120 @@ class SpotifyService:
             logger.error(f"Error getting genre seeds: {e}")
             return []
     
+    def search_artist(
+        self,
+        artist_name: str,
+        limit: int = 10
+    ) -> List[Dict[str, Any]]:
+        if not self.is_available():
+            logger.warning("Spotify service not available")
+            return []
+        
+        try:
+            results = self.spotify.search(
+                q=f"artist:{artist_name}",
+                type='artist',
+                limit=min(limit, 50)
+            )
+            
+            artists = []
+            for artist in results['artists']['items']:
+                artists.append(self._format_artist(artist))
+            
+            logger.info(f"Found {len(artists)} artists for: {artist_name}")
+            return artists
+            
+        except Exception as e:
+            logger.error(f"Error searching for artist: {e}")
+            return []
+    
+    def get_artist_top_tracks(
+        self,
+        artist_id: str,
+        market: str = 'US',
+        limit: int = 10
+    ) -> List[Dict[str, Any]]:
+        if not self.is_available():
+            logger.warning("Spotify service not available")
+            return []
+        
+        try:
+            results = self.spotify.artist_top_tracks(artist_id, country=market)
+            
+            tracks = []
+            for track in results['tracks'][:limit]:
+                tracks.append(self._format_track(track))
+            
+            logger.info(f"Got {len(tracks)} top tracks for artist {artist_id}")
+            return tracks
+            
+        except Exception as e:
+            logger.error(f"Error getting artist top tracks: {e}")
+            return []
+    
+    def get_artist_tracks_including_collabs(
+        self,
+        artist_id: str,
+        artist_name: str,
+        limit: int = 15
+    ) -> List[Dict[str, Any]]:
+        if not self.is_available():
+            logger.warning("Spotify service not available")
+            return []
+        
+        try:
+            all_tracks = []
+            seen_ids = set()
+            
+            top_tracks = self.get_artist_top_tracks(artist_id, limit=10)
+            for track in top_tracks:
+                track_id = track['spotify_id']
+                if track_id not in seen_ids:
+                    seen_ids.add(track_id)
+                    all_tracks.append(track)
+            
+            collab_query = f'artist:"{artist_name}"'
+            results = self.spotify.search(q=collab_query, type='track', limit=30)
+            
+            for track in results['tracks']['items']:
+                track_id = track['id']
+                if track_id not in seen_ids:
+                    artist_names = [a['name'].lower() for a in track['artists']]
+                    if artist_name.lower() in artist_names:
+                        seen_ids.add(track_id)
+                        all_tracks.append(self._format_track(track))
+                        
+                        if len(all_tracks) >= limit:
+                            break
+            
+            logger.info(
+                f"Got {len(all_tracks)} tracks for artist {artist_name} "
+                f"(including collaborations)"
+            )
+            return all_tracks[:limit]
+            
+        except Exception as e:
+            logger.error(f"Error getting artist tracks with collabs: {e}")
+            # Fallback to just top tracks
+            return self.get_artist_top_tracks(artist_id, limit=limit)
+    
+    def get_artist_by_id(self, artist_id: str) -> Optional[Dict[str, Any]]:
+        if not self.is_available():
+            return None
+        
+        try:
+            artist = self.spotify.artist(artist_id)
+            return self._format_artist(artist)
+        except Exception as e:
+            logger.error(f"Error getting artist by ID: {e}")
+            return None
+    
     def search_track(
         self,
         song_name: str,
         artist: Optional[str] = None,
         limit: int = 1
     ) -> Optional[Dict[str, Any]]:
-        """
-        Search for a track on Spotify.
-        
-        Args:
-            song_name: Name of the song
-            artist: Optional artist name for more accurate search
-            limit: Number of results to return
-            
-        Returns:
-            Track information or None if not found
-        """
         if not self.is_available():
             logger.warning("Spotify service not available")
             return None
@@ -98,15 +183,6 @@ class SpotifyService:
             return None
     
     def get_track_by_id(self, track_id: str) -> Optional[Dict[str, Any]]:
-        """
-        Get track information by Spotify ID.
-        
-        Args:
-            track_id: Spotify track ID
-            
-        Returns:
-            Track information or None if not found
-        """
         if not self.is_available():
             return None
         
@@ -117,48 +193,12 @@ class SpotifyService:
             logger.error(f"Error getting track by ID: {e}")
             return None
     
-    def get_recommendations(
-        self,
-        seed_tracks: Optional[List[str]] = None,
-        seed_artists: Optional[List[str]] = None,
-        seed_genres: Optional[List[str]] = None,
-        limit: int = 20,
-        **kwargs
-    ) -> List[Dict[str, Any]]:
-        """
-        Get track recommendations based on seeds.
-        
-        NOTE: Spotify recommendations API has been deprecated and is no longer available.
-        This method now returns an empty list. Use search_by_multiple_queries instead.
-        
-        Args:
-            seed_tracks: List of track IDs (max 5)
-            seed_artists: List of artist IDs (max 5)
-            seed_genres: List of genres (max 5)
-            limit: Number of recommendations
-            **kwargs: Additional parameters (ignored)
-            
-        Returns:
-            Empty list (API deprecated)
-        """
-        logger.info("Recommendations API is deprecated, use search-based methods instead")
-        return []
-    
+   
     def search_tracks_by_emotion(
         self,
         emotion: str,
         num_results: int = 20
     ) -> List[Dict[str, Any]]:
-        """
-        Search for tracks matching an emotion using Spotify search.
-        
-        Args:
-            emotion: Emotion keyword
-            num_results: Number of results
-            
-        Returns:
-            List of matching tracks
-        """
         if not self.is_available():
             return []
         
@@ -184,16 +224,6 @@ class SpotifyService:
         queries: List[str],
         limit_per_query: int = 20
     ) -> List[Dict[str, Any]]:
-        """
-        Search for tracks using multiple queries and combine results.
-        
-        Args:
-            queries: List of search queries
-            limit_per_query: Maximum results per query
-            
-        Returns:
-            Combined list of unique tracks
-        """
         if not self.is_available():
             return []
         
@@ -225,15 +255,6 @@ class SpotifyService:
         self,
         album_id: str
     ) -> List[Dict[str, Any]]:
-        """
-        Get all tracks from a Spotify album.
-        
-        Args:
-            album_id: Spotify album ID
-            
-        Returns:
-            List of tracks from the album
-        """
         if not self.is_available():
             return []
         
@@ -257,16 +278,6 @@ class SpotifyService:
         query: str,
         limit: int = 10
     ) -> List[str]:
-        """
-        Search for albums and return their IDs.
-        
-        Args:
-            query: Search query
-            limit: Number of albums to return
-            
-        Returns:
-            List of album IDs
-        """
         if not self.is_available():
             return []
         
@@ -289,16 +300,6 @@ class SpotifyService:
         self,
         track_ids: List[str]
     ) -> List[Dict[str, Any]]:
-        """
-        Get multiple tracks.
-        Handles batching to avoid Spotify's 100 ID limit.
-        
-        Args:
-            track_ids: List of Spotify track IDs
-            
-        Returns:
-            List of tracks
-        """
         if not self.is_available():
             return []
         
@@ -336,4 +337,14 @@ class SpotifyService:
             'duration_ms': track['duration_ms'],
             'popularity': track.get('popularity', 0),
             'album_image': track['album']['images'][0]['url'] if track['album']['images'] else None
+        }
+    
+    def _format_artist(self, artist: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            'spotify_id': artist['id'],
+            'name': artist['name'],
+            'genres': artist.get('genres', []),
+            'popularity': artist.get('popularity', 0),
+            'image_url': artist['images'][0]['url'] if artist.get('images') else None,
+            'external_url': artist['external_urls']['spotify']
         }
