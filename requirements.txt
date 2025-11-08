@@ -8,9 +8,6 @@ sentence-transformers>=2.2.0
 numpy>=1.24.0
 pandas>=2.0.0
 
-# Image Generation
-pillow>=10.0.0
-
 # Music APIs
 spotipy>=2.23.0
 

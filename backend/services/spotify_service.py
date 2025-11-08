@@ -37,6 +37,27 @@ class SpotifyService:
         """Check if Spotify service is available."""
         return self.spotify is not None
     
+    def get_available_genre_seeds(self) -> List[str]:
+        """
+        Get all available genre seeds from Spotify.
+        These are the genres that can be used in search queries.
+        
+        Returns:
+            List of genre strings
+        """
+        if not self.is_available():
+            logger.warning("Spotify service not available")
+            return []
+        
+        try:
+            # Spotify provides a list of available genre seeds
+            genres = self.spotify.recommendation_genre_seeds()
+            logger.info(f"Retrieved {len(genres)} available genre seeds from Spotify")
+            return genres.get('genres', [])
+        except Exception as e:
+            logger.error(f"Error getting genre seeds: {e}")
+            return []
+    
     def search_track(
         self,
         song_name: str,
@@ -142,7 +163,6 @@ class SpotifyService:
             return []
         
         try:
-            # Search using emotion as keyword
             results = self.spotify.search(
                 q=emotion,
                 type='track',
@@ -222,8 +242,6 @@ class SpotifyService:
             tracks = []
             
             for track in results['items']:
-                # Note: album_tracks returns simplified track objects
-                # We need to get full track info for complete data
                 full_track = self.spotify.track(track['id'])
                 tracks.append(self._format_track(full_track))
             
@@ -285,14 +303,12 @@ class SpotifyService:
             return []
         
         try:
-            # Spotify API limits to 50-100 IDs per request, use 50 to be safe
             batch_size = 50
             all_results = []
             
             for i in range(0, len(track_ids), batch_size):
                 batch_ids = track_ids[i:i + batch_size]
                 
-                # Get tracks info
                 tracks = self.spotify.tracks(batch_ids)
                 
                 for track in tracks['tracks']:

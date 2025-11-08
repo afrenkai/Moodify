@@ -29,10 +29,8 @@ class LLMEmotionService:
         self.model = SentenceTransformer(model_name)
         self.embedding_dim = self.model.get_sentence_embedding_dimension()
         
-        # Initialize emotion embeddings from rich contextual descriptions
         self.emotion_embeddings = self._build_emotion_embeddings()
         
-        # Cache for computed embeddings
         self._embedding_cache: Dict[str, np.ndarray] = {}
         
         logger.info(f"Initialized with {len(self.emotion_embeddings)} emotion profiles")
@@ -107,36 +105,53 @@ class LLMEmotionService:
         
         emotion_embeddings = {}
         for emotion, contexts in emotion_contexts.items():
-            # Combine multiple contextual descriptions
             embeddings = self.model.encode(contexts, convert_to_numpy=True)
-            # Average the embeddings for a richer representation
             emotion_embeddings[emotion] = np.mean(embeddings, axis=0)
         
         return emotion_embeddings
     
     def get_emotion_embedding(self, emotion: str) -> np.ndarray:
-        """Get or compute embedding for an emotion."""
+        """
+        Get or compute embedding for an emotion.
+        Learns new emotions on-the-fly using contextual understanding.
+        """
         emotion_lower = emotion.lower().strip()
         
-        # Check if we have a pre-computed embedding
+        # Check if it's a predefined emotion
         if emotion_lower in self.emotion_embeddings:
             return self.emotion_embeddings[emotion_lower]
         
-        # Check cache
+        # Check cache for previously learned emotions
         if emotion_lower in self._embedding_cache:
+            logger.debug(f"Using cached embedding for learned emotion '{emotion}'")
             return self._embedding_cache[emotion_lower]
         
-        # Compute new embedding for custom emotion
+        # Learn the new emotion using contextual understanding
+        logger.info(f"Learning new emotion '{emotion}' through contextual understanding")
+        
+        # Generate rich context for the new emotion
         contexts = [
             f"music that feels {emotion_lower}",
             f"songs with {emotion_lower} mood and atmosphere",
-            f"{emotion_lower} emotional vibes and energy"
+            f"{emotion_lower} emotional vibes and energy",
+            f"the feeling of being {emotion_lower}",
+            f"music that captures {emotion_lower} emotions"
         ]
+        
+        # Encode contexts to learn the emotion's meaning
         embeddings = self.model.encode(contexts, convert_to_numpy=True)
         emotion_emb = np.mean(embeddings, axis=0)
         
-        # Cache it
+        # Cache the learned emotion for future use
         self._embedding_cache[emotion_lower] = emotion_emb
+        
+        # Log related emotions to help understand the new emotion
+        related = self.find_related_emotions(emotion_lower, top_k=3)
+        if related:
+            related_names = [name for name, _ in related]
+            logger.info(
+                f"Learned emotion '{emotion}' - most similar to: {', '.join(related_names)}"
+            )
         
         return emotion_emb
     
@@ -157,7 +172,6 @@ class LLMEmotionService:
         Returns:
             Similarity score from 0.0 to 1.0
         """
-        # Contextualize the text
         if context == "song":
             contextualized = f"This song is: {text}"
         elif context == "lyrics":
@@ -165,14 +179,11 @@ class LLMEmotionService:
         else:
             contextualized = text
         
-        # Get embeddings
         text_emb = self.model.encode([contextualized], convert_to_numpy=True)[0]
         emotion_emb = self.get_emotion_embedding(target_emotion)
         
-        # Compute cosine similarity
         similarity = cosine_similarity(text_emb, emotion_emb)
         
-        # Normalize to 0-1 range
         normalized = (similarity + 1) / 2
         
         return float(normalized)
@@ -202,7 +213,6 @@ class LLMEmotionService:
             sim = cosine_similarity(query_emb, emo_emb)
             similarities.append((emo_name, float(sim)))
         
-        # Sort by similarity
         similarities.sort(key=lambda x: x[1], reverse=True)
         
         return similarities[:top_k]
@@ -253,6 +263,7 @@ class LLMEmotionService:
     ) -> Dict[str, Any]:
         """
         Analyze a query with multiple emotions to understand their relationship.
+        Learns unknown emotions on-the-fly.
         
         Args:
             emotions: List of emotion strings
@@ -263,8 +274,20 @@ class LLMEmotionService:
         if not emotions:
             return {"error": "No emotions provided"}
         
-        # Get embeddings for all emotions
-        emotion_embs = [self.get_emotion_embedding(e) for e in emotions]
+        logger.info(f"Analyzing multi-emotion query: {emotions}")
+        
+        # Get embeddings for all emotions (learns unknown ones automatically)
+        emotion_embs = []
+        learned_emotions = []
+        for e in emotions:
+            emb = self.get_emotion_embedding(e)
+            emotion_embs.append(emb)
+            # Track which emotions were newly learned
+            if e.lower() not in self.emotion_embeddings:
+                learned_emotions.append(e)
+        
+        if learned_emotions:
+            logger.info(f"Learned {len(learned_emotions)} new emotions: {learned_emotions}")
         
         # Compute pairwise similarities
         similarities = []
@@ -274,16 +297,16 @@ class LLMEmotionService:
                     sim = cosine_similarity(emotion_embs[i], emotion_embs[j])
                     similarities.append((e1, e2, float(sim)))
         
-        # Identify conflicts (low similarity)
+        # Identify conflicts (low similarity = conflicting emotions)
         conflicts = [(e1, e2, sim) for e1, e2, sim in similarities if sim < 0.3]
         
-        # Identify harmonies (high similarity)
+        # Identify harmonies (high similarity = compatible emotions)
         harmonies = [(e1, e2, sim) for e1, e2, sim in similarities if sim > 0.7]
         
         # Create blended embedding
         blended_emb = np.mean(emotion_embs, axis=0)
         
-        # Find which predefined emotion is closest to the blend
+        # Find which predefined emotion best matches the blend
         best_match = None
         best_score = -1
         for emo_name, emo_emb in self.emotion_embeddings.items():
@@ -292,11 +315,29 @@ class LLMEmotionService:
                 best_score = sim
                 best_match = emo_name
         
-        return {
+        analysis = {
             "emotions": emotions,
             "blended_emotion": best_match,
             "blend_confidence": float(best_score),
             "conflicts": conflicts,
             "harmonies": harmonies,
-            "is_coherent": len(conflicts) == 0
+            "is_coherent": len(conflicts) == 0,
+            "learned_emotions": learned_emotions
         }
+        
+        if conflicts:
+            logger.warning(f"Emotion conflicts detected: {[(e1, e2) for e1, e2, _ in conflicts]}")
+        
+        if harmonies:
+            logger.info(f"Harmonious emotion pairs: {[(e1, e2) for e1, e2, _ in harmonies]}")
+        
+        return analysis
+    
+    def get_learned_emotions(self) -> List[str]:
+        """
+        Get list of all emotions that have been learned (beyond predefined ones).
+        
+        Returns:
+            List of learned emotion names
+        """
+        return list(self._embedding_cache.keys())

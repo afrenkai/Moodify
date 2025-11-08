@@ -45,7 +45,7 @@ data/
 *.sqlite3
 
 # Models
-models/
+# models/
 *.pth
 *.pkl
 *.h5

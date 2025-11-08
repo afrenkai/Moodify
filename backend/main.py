@@ -47,7 +47,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="EmoRec API",
-    description="Emotion-based playlist and mood collage generation API",
+    description="Emotion-based playlist generation API",
     version="0.1.0",
     lifespan=lifespan
 )
@@ -70,7 +70,7 @@ async def root():
     return {
         "name": "EmoRec API",
         "version": "0.1.0",
-        "description": "Emotion-based playlist and mood collage generation",
+        "description": "Emotion-based playlist generation",
         "endpoints": {
             "docs": "/docs",
             "generate_playlist": "/api/v1/generate-playlist",

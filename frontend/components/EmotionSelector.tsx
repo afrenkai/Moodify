@@ -17,7 +17,10 @@ export default function EmotionSelector({
 	const [inputValue, setInputValue] = useState('');
 	const [showSuggestions, setShowSuggestions] = useState(false);
 
-	const filteredEmotions = emotions.filter((emotion) =>
+	// Ensure emotions is always an array
+	const emotionsArray = Array.isArray(emotions) ? emotions : [];
+
+	const filteredEmotions = emotionsArray.filter((emotion) =>
 		emotion.toLowerCase().includes(inputValue.toLowerCase())
 	);
 
@@ -35,7 +38,7 @@ export default function EmotionSelector({
 	const handleSubmit = () => {
 		if (!inputValue.trim()) return;
 
-		const exactMatch = emotions.find(
+		const exactMatch = emotionsArray.find(
 			(emotion) => emotion.toLowerCase() === inputValue.toLowerCase()
 		);
 		if (exactMatch) {
@@ -43,7 +46,6 @@ export default function EmotionSelector({
 		} else if (filteredEmotions.length > 0) {
 			handleSelectEmotion(filteredEmotions[0]);
 		} else {
-			// Allow custom emotions
 			onSelect(inputValue.trim().toLowerCase());
 			setShowSuggestions(false);
 		}

@@ -84,36 +84,130 @@ class AsyncGeniusService:
         emotion_keywords = {
             'happy': ['happy', 'joy', 'smile', 'laugh', 'celebrate', 'bright', 'sunshine', 
                       'good', 'wonderful', 'amazing', 'fantastic', 'cheerful', 'delight',
-                      'fun', 'party', 'dancing', 'excited', 'glad', 'blessed'],
+                      'fun', 'party', 'dancing', 'excited', 'glad', 'blessed', 'thrill',
+                      'euphoria', 'ecstatic', 'bliss', 'grin', 'giggle', 'cheer', 'jolly',
+                      'merry', 'gleeful', 'elated', 'jubilant', 'radiant', 'golden'],
+            
             'sad': ['sad', 'cry', 'tear', 'lonely', 'heartbreak', 'miss', 'lost', 'pain',
                     'hurt', 'broken', 'empty', 'alone', 'sorrow', 'grief', 'blue', 'down',
-                    'depressed', 'misery', 'suffering', 'ache'],
+                    'depressed', 'misery', 'suffering', 'ache', 'weep', 'mourn', 'sobbing',
+                    'despair', 'hopeless', 'darkness', 'gloom', 'somber', 'melancholy',
+                    'heavy', 'numb', 'hollow', 'forsaken', 'abandoned', 'dejected'],
+            
             'love': ['love', 'heart', 'together', 'forever', 'kiss', 'embrace', 'darling',
                      'baby', 'dear', 'sweet', 'romance', 'passion', 'desire', 'need',
-                     'want', 'adore', 'cherish', 'devotion'],
+                     'want', 'adore', 'cherish', 'devotion', 'affection', 'tender',
+                     'intimate', 'lover', 'beloved', 'soulmate', 'valentine', 'crush',
+                     'infatuation', 'enamored', 'yearning', 'longing', 'attracted'],
+            
             'angry': ['angry', 'rage', 'hate', 'fight', 'scream', 'mad', 'burn',
                       'fury', 'violent', 'destroy', 'break', 'smash', 'kill', 'blood',
-                      'war', 'enemy', 'revenge', 'fire'],
+                      'war', 'enemy', 'revenge', 'fire', 'furious', 'wrath', 'outrage',
+                      'fierce', 'savage', 'brutal', 'hostile', 'aggression', 'venom',
+                      'spite', 'bitter', 'resentment', 'grudge', 'storm', 'thunder'],
+            
             'hopeful': ['hope', 'dream', 'believe', 'faith', 'future', 'tomorrow', 'rise',
                         'better', 'new', 'change', 'light', 'shine', 'star', 'wish',
-                        'possible', 'believe', 'trust', 'prayer'],
+                        'possible', 'trust', 'prayer', 'dawn', 'sunrise', 'begin',
+                        'start', 'fresh', 'optimistic', 'inspire', 'aspire', 'vision',
+                        'miracle', 'fortune', 'blessed', 'lucky', 'chance', 'opportunity'],
+            
             'nostalgic': ['remember', 'memory', 'past', 'yesterday', 'used to', 'back when',
                           'once', 'before', 'old', 'time', 'moment', 'ago', 'reminisce',
-                          'recall', 'forgotten', 'history'],
+                          'recall', 'forgotten', 'history', 'childhood', 'younger', 'summer',
+                          'seasons', 'photographs', 'letters', 'vintage', 'ancient',
+                          'faded', 'dusty', 'previous', 'former', 'expired', 'bygone'],
+            
             'energetic': ['run', 'dance', 'move', 'jump', 'wild', 'alive', 'fire',
                           'fast', 'quick', 'rush', 'power', 'energy', 'strong', 'loud',
-                          'intense', 'explosive', 'electric', 'pumped'],
+                          'intense', 'explosive', 'electric', 'pumped', 'adrenaline',
+                          'charged', 'dynamic', 'vigorous', 'fierce', 'blazing', 'roar',
+                          'thunder', 'lightning', 'ignite', 'spark', 'burst', 'surge'],
+            
             'calm': ['calm', 'peace', 'quiet', 'still', 'gentle', 'soft', 'breathe',
                      'slow', 'rest', 'relax', 'tranquil', 'serene', 'silent', 'sleep',
-                     'whisper', 'soothe', 'ease'],
+                     'whisper', 'soothe', 'ease', 'drift', 'float', 'mellow', 'laid',
+                     'chill', 'steady', 'smooth', 'mild', 'placid', 'composed'],
+            
             'melancholic': ['melancholy', 'wistful', 'bittersweet', 'longing', 'yearning',
-                            'regret', 'lament', 'mourn', 'fade', 'dusk', 'autumn', 'rain'],
+                            'regret', 'lament', 'mourn', 'fade', 'dusk', 'autumn', 'rain',
+                            'gray', 'cold', 'distant', 'echoes', 'shadows', 'ghosts',
+                            'twilight', 'fading', 'waning', 'decline', 'diminish', 'slip',
+                            'drift', 'dissolve', 'vanish', 'haunt', 'linger', 'trace'],
+            
             'romantic': ['romantic', 'lover', 'intimate', 'tender', 'gentle', 'close',
-                         'touch', 'hold', 'warm', 'soft', 'beautiful', 'eyes'],
+                         'touch', 'hold', 'warm', 'soft', 'beautiful', 'eyes', 'gaze',
+                         'caress', 'cuddle', 'snuggle', 'whisper', 'moonlight', 'candlelight',
+                         'roses', 'flowers', 'serenade', 'enchanted', 'charmed', 'swept'],
+            
             'anxious': ['anxious', 'worry', 'fear', 'scared', 'nervous', 'panic', 'stress',
-                        'tension', 'pressure', 'uncertain', 'doubt', 'restless', 'uneasy'],
+                        'tension', 'pressure', 'uncertain', 'doubt', 'restless', 'uneasy',
+                        'afraid', 'terrified', 'dread', 'paranoid', 'frantic', 'troubled',
+                        'distressed', 'overwhelmed', 'crisis', 'chaos', 'confusion',
+                        'shaking', 'trembling', 'racing', 'breathless', 'trapped'],
+            
             'peaceful': ['peaceful', 'harmony', 'balance', 'zen', 'meditation', 'nature',
-                         'ocean', 'breeze', 'sunset', 'morning', 'stillness']
+                         'ocean', 'breeze', 'sunset', 'morning', 'stillness', 'sanctuary',
+                         'haven', 'oasis', 'garden', 'meadow', 'valley', 'river', 'stream',
+                         'mountain', 'sky', 'clouds', 'birds', 'gentle', 'flowing'],
+            
+            # Additional nuanced emotions
+            'tired': ['tired', 'exhausted', 'weary', 'drained', 'fatigue', 'worn',
+                      'sleepy', 'drowsy', 'spent', 'depleted', 'sluggish', 'languid',
+                      'lethargic', 'weak', 'faint', 'heavy', 'burden', 'weight'],
+            
+            'confident': ['confident', 'proud', 'strong', 'bold', 'brave', 'fearless',
+                          'unstoppable', 'invincible', 'powerful', 'mighty', 'champion',
+                          'winner', 'conqueror', 'triumph', 'victory', 'glory', 'crown',
+                          'throne', 'king', 'queen', 'boss', 'legend', 'hero'],
+            
+            'rebellious': ['rebel', 'break', 'rules', 'free', 'wild', 'chaos', 'riot',
+                           'revolution', 'fight', 'resist', 'defy', 'against', 'outlaw',
+                           'renegade', 'maverick', 'anarchist', 'underground', 'punk'],
+            
+            'playful': ['play', 'fun', 'silly', 'joke', 'laugh', 'tease', 'flirt',
+                        'game', 'trick', 'prank', 'mischief', 'cheeky', 'witty',
+                        'clever', 'humorous', 'amusing', 'entertaining', 'lighthearted'],
+            
+            'sensual': ['body', 'skin', 'lips', 'touch', 'taste', 'feel', 'sensation',
+                        'desire', 'heat', 'sweat', 'breathe', 'pulse', 'rhythm',
+                        'slow', 'deep', 'intense', 'curves', 'smooth', 'silk'],
+            
+            'empowered': ['power', 'strong', 'rise', 'fight', 'stand', 'voice', 'speak',
+                          'roar', 'warrior', 'survivor', 'overcome', 'conquer', 'unbreakable',
+                          'resilient', 'fierce', 'determined', 'unstoppable', 'force'],
+            
+            'vulnerable': ['vulnerable', 'fragile', 'delicate', 'exposed', 'raw', 'open',
+                           'honest', 'naked', 'bare', 'confession', 'admit', 'reveal',
+                           'truth', 'weakness', 'human', 'imperfect', 'flawed'],
+            
+            'mysterious': ['mystery', 'secret', 'shadow', 'dark', 'hidden', 'unknown',
+                           'enigma', 'puzzle', 'cryptic', 'strange', 'whisper', 'midnight',
+                           'moon', 'veil', 'mask', 'lurk', 'fog', 'mist', 'obscure'],
+            
+            'dreamy': ['dream', 'fantasy', 'imagine', 'surreal', 'ethereal', 'floating',
+                       'cloud', 'sky', 'stars', 'cosmic', 'universe', 'magical',
+                       'enchanted', 'mystical', 'otherworldly', 'transcendent', 'drift'],
+            
+            'grateful': ['grateful', 'thankful', 'appreciate', 'bless', 'fortune', 'lucky',
+                         'gift', 'treasure', 'precious', 'value', 'honor', 'privilege',
+                         'grace', 'mercy', 'kindness', 'generosity', 'abundance'],
+            
+            'lonely': ['lonely', 'alone', 'solitude', 'isolated', 'separate', 'distant',
+                       'apart', 'missing', 'absence', 'void', 'empty', 'silence',
+                       'nobody', 'solo', 'single', 'deserted', 'stranded', 'abandoned'],
+            
+            'inspired': ['inspire', 'motivation', 'driven', 'passion', 'create', 'build',
+                         'achieve', 'realize', 'manifest', 'purpose', 'calling', 'destiny',
+                         'potential', 'greatness', 'excellence', 'brilliance', 'genius'],
+            
+            'conflicted': ['torn', 'divided', 'confused', 'stuck', 'between', 'choice',
+                           'dilemma', 'struggle', 'battle', 'conflict', 'war', 'fight',
+                           'against', 'within', 'question', 'doubt', 'maybe', 'perhaps'],
+            
+            'carefree': ['carefree', 'easy', 'breezy', 'light', 'simple', 'wandering',
+                         'roaming', 'drifting', 'floating', 'lazy', 'casual', 'relaxed',
+                         'spontaneous', 'adventure', 'explore', 'discover', 'journey'],
         }
         
         lyrics_lower = lyrics.lower()
@@ -131,40 +225,156 @@ class AsyncGeniusService:
         emotional_keywords: Dict[str, int],
         target_emotion: str
     ) -> float:
+        """
+        Compute how well the lyrics match the target emotion.
+        Uses direct matching and semantic relationships between emotions.
+        
+        Args:
+            emotional_keywords: Dict of emotion -> keyword count from lyrics
+            target_emotion: The emotion we're trying to match
+            
+        Returns:
+            Score from 0.0 to 1.0
+        """
         if not emotional_keywords:
             return 0.0
         
         target_emotion = target_emotion.lower().strip()
         
+        # Direct match - highest score
         if target_emotion in emotional_keywords:
             direct_score = emotional_keywords[target_emotion]
             total_keywords = sum(emotional_keywords.values())
             
             normalized = direct_score / max(total_keywords, 1)
-            return min(1.0, normalized * 2.0)  
+            return min(1.0, normalized * 2.0)  # Boost direct matches
 
+        # Expanded semantic relationships between emotions
         related_emotions = {
-            'happy': ['love', 'hopeful', 'energetic'],
-            'sad': ['melancholic', 'nostalgic', 'anxious'],
-            'energetic': ['happy', 'angry'],
-            'calm': ['peaceful', 'hopeful'],
-            'angry': ['energetic', 'anxious'],
-            'melancholic': ['sad', 'nostalgic'],
-            'hopeful': ['happy', 'peaceful'],
-            'romantic': ['love', 'happy', 'peaceful'],
-            'anxious': ['sad', 'angry'],
-            'peaceful': ['calm', 'hopeful']
+            'happy': {
+                'love': 0.7, 'hopeful': 0.7, 'energetic': 0.6, 'playful': 0.8,
+                'grateful': 0.7, 'confident': 0.6, 'carefree': 0.8, 'inspired': 0.6
+            },
+            'sad': {
+                'melancholic': 0.9, 'nostalgic': 0.7, 'anxious': 0.6, 'lonely': 0.9,
+                'vulnerable': 0.7, 'conflicted': 0.6, 'tired': 0.5
+            },
+            'energetic': {
+                'happy': 0.6, 'angry': 0.7, 'confident': 0.8, 'rebellious': 0.7,
+                'empowered': 0.8, 'playful': 0.6, 'inspired': 0.7
+            },
+            'calm': {
+                'peaceful': 0.9, 'hopeful': 0.5, 'dreamy': 0.7, 'carefree': 0.6,
+                'grateful': 0.5, 'tired': 0.5
+            },
+            'angry': {
+                'energetic': 0.7, 'anxious': 0.6, 'rebellious': 0.8, 'empowered': 0.6,
+                'conflicted': 0.6
+            },
+            'melancholic': {
+                'sad': 0.9, 'nostalgic': 0.8, 'lonely': 0.8, 'vulnerable': 0.7,
+                'mysterious': 0.5, 'dreamy': 0.5
+            },
+            'hopeful': {
+                'happy': 0.7, 'peaceful': 0.5, 'inspired': 0.8, 'empowered': 0.7,
+                'confident': 0.6, 'grateful': 0.7
+            },
+            'romantic': {
+                'love': 0.9, 'happy': 0.6, 'peaceful': 0.5, 'dreamy': 0.6,
+                'sensual': 0.8, 'playful': 0.5, 'vulnerable': 0.6
+            },
+            'anxious': {
+                'sad': 0.6, 'angry': 0.6, 'conflicted': 0.8, 'vulnerable': 0.7,
+                'tired': 0.6, 'lonely': 0.5
+            },
+            'peaceful': {
+                'calm': 0.9, 'hopeful': 0.5, 'dreamy': 0.7, 'grateful': 0.6,
+                'carefree': 0.6
+            },
+            'tired': {
+                'calm': 0.5, 'sad': 0.5, 'melancholic': 0.6, 'peaceful': 0.4,
+                'vulnerable': 0.5, 'lonely': 0.5
+            },
+            'confident': {
+                'energetic': 0.8, 'empowered': 0.9, 'happy': 0.6, 'rebellious': 0.6,
+                'inspired': 0.7
+            },
+            'rebellious': {
+                'angry': 0.8, 'energetic': 0.7, 'confident': 0.6, 'empowered': 0.7
+            },
+            'playful': {
+                'happy': 0.8, 'energetic': 0.6, 'carefree': 0.7, 'love': 0.5
+            },
+            'sensual': {
+                'romantic': 0.8, 'love': 0.7, 'mysterious': 0.5, 'dreamy': 0.4
+            },
+            'empowered': {
+                'confident': 0.9, 'energetic': 0.8, 'rebellious': 0.7, 'inspired': 0.8,
+                'hopeful': 0.7, 'angry': 0.5
+            },
+            'vulnerable': {
+                'sad': 0.7, 'anxious': 0.7, 'romantic': 0.6, 'melancholic': 0.7,
+                'lonely': 0.6, 'honest': 0.8
+            },
+            'mysterious': {
+                'dreamy': 0.7, 'melancholic': 0.5, 'sensual': 0.5, 'anxious': 0.4
+            },
+            'dreamy': {
+                'calm': 0.7, 'peaceful': 0.7, 'mysterious': 0.7, 'romantic': 0.6,
+                'hopeful': 0.5, 'nostalgic': 0.5
+            },
+            'grateful': {
+                'happy': 0.7, 'hopeful': 0.7, 'peaceful': 0.6, 'love': 0.6,
+                'calm': 0.5
+            },
+            'lonely': {
+                'sad': 0.9, 'melancholic': 0.8, 'nostalgic': 0.6, 'vulnerable': 0.6,
+                'anxious': 0.5
+            },
+            'inspired': {
+                'hopeful': 0.8, 'energetic': 0.7, 'empowered': 0.8, 'confident': 0.7,
+                'happy': 0.6
+            },
+            'conflicted': {
+                'anxious': 0.8, 'sad': 0.6, 'angry': 0.6, 'vulnerable': 0.7,
+                'melancholic': 0.6
+            },
+            'carefree': {
+                'happy': 0.8, 'calm': 0.6, 'peaceful': 0.6, 'playful': 0.7,
+                'dreamy': 0.5
+            },
+            'love': {
+                'romantic': 0.9, 'happy': 0.7, 'grateful': 0.6, 'vulnerable': 0.5,
+                'sensual': 0.7
+            },
+            'nostalgic': {
+                'melancholic': 0.8, 'sad': 0.7, 'peaceful': 0.4, 'dreamy': 0.5,
+                'lonely': 0.6
+            }
         }
 
+        # Calculate weighted score from related emotions
         if target_emotion in related_emotions:
             related_score = 0.0
-            for related in related_emotions[target_emotion]:
-                if related in emotional_keywords:
-                    related_score += emotional_keywords[related] * 0.3  
+            max_possible_score = 0.0
             
-            total_keywords = sum(emotional_keywords.values())
-            if total_keywords > 0:
-                return min(0.7, related_score / total_keywords)  
+            for related_emotion, weight in related_emotions[target_emotion].items():
+                if related_emotion in emotional_keywords:
+                    related_score += emotional_keywords[related_emotion] * weight
+                max_possible_score += weight * 5  # Assume max 5 mentions per emotion
+            
+            if max_possible_score > 0:
+                normalized_score = related_score / max_possible_score
+                return min(0.8, normalized_score * 1.5)  # Cap related matches at 0.8
+        
+        # Fallback: check if any detected emotions are in our target's related list
+        for detected_emotion, count in emotional_keywords.items():
+            if detected_emotion in related_emotions:
+                if target_emotion in related_emotions[detected_emotion]:
+                    weight = related_emotions[detected_emotion][target_emotion]
+                    total_keywords = sum(emotional_keywords.values())
+                    normalized = (count / max(total_keywords, 1)) * weight
+                    return min(0.7, normalized * 1.5)  # Cap reverse matches at 0.7
         
         return 0.0
     
@@ -202,9 +412,6 @@ class AsyncGeniusService:
             if not song_data:
                 return None
             
-            # For now, return basic data
-            # In production, you'd use lyricsgenius library here to get lyrics
-            # and compute emotional profile
             return song_data
             
         except Exception as e:
@@ -229,9 +436,6 @@ class AsyncGeniusService:
         Returns:
             Lyrics text or None
         """
-        # This would require web scraping the Genius website
-        # For now, return None to keep it simple
-        # In production, use lyricsgenius library or similar
         return None
     
     async def batch_get_emotional_profiles(
@@ -255,7 +459,6 @@ class AsyncGeniusService:
         if not self.is_available():
             return {}
         
-        # Import lyricsgenius here to avoid issues if not installed
         try:
             import lyricsgenius
         except ImportError:
@@ -264,7 +467,6 @@ class AsyncGeniusService:
         
         results = {}
         
-        # Initialize genius client
         genius = lyricsgenius.Genius(
             self.access_token,
             timeout=5,
@@ -277,7 +479,6 @@ class AsyncGeniusService:
         async def get_profile_for_song(song_name: str, artist: str):
             """Get emotional profile for a single song."""
             try:
-                # Run in thread pool to avoid blocking
                 loop = asyncio.get_event_loop()
                 song = await loop.run_in_executor(
                     None, 
@@ -287,10 +488,8 @@ class AsyncGeniusService:
                 if not song or not song.lyrics:
                     return None
                 
-                # Extract emotional keywords (not storing lyrics)
                 emotional_keywords = self.extract_emotional_keywords(song.lyrics)
                 
-                # Compute emotion match score if target provided
                 emotion_score = 0.0
                 if target_emotion and emotional_keywords:
                     emotion_score = self.compute_emotion_match_score(
@@ -298,7 +497,6 @@ class AsyncGeniusService:
                         target_emotion
                     )
                 
-                # Determine dominant emotion
                 dominant_emotion = None
                 if emotional_keywords:
                     dominant_emotion = max(emotional_keywords.items(), key=lambda x: x[1])[0]
@@ -317,14 +515,12 @@ class AsyncGeniusService:
                 logger.debug(f"Could not get profile for {song_name}: {e}")
                 return None
         
-        # Create semaphore to limit concurrent requests
         semaphore = asyncio.Semaphore(max_concurrent)
         
         async def get_with_semaphore(song_name: str, artist: str):
             async with semaphore:
                 return await get_profile_for_song(song_name, artist)
         
-        # Process all songs
         tasks = [get_with_semaphore(song_name, artist) for song_name, artist in songs]
         
         try:
@@ -337,7 +533,6 @@ class AsyncGeniusService:
                 if isinstance(response, dict) and response:
                     key = f"{song_name}|{artist}"
                     results[key] = response
-                    # Cache the result
                     cache_key = self._get_cache_key(song_name, artist)
                     self.cache[cache_key] = response
                     
@@ -395,27 +590,23 @@ class AsyncGeniusService:
         results = {}
         
         async with aiohttp.ClientSession() as session:
-            # Create semaphore to limit concurrent requests
             semaphore = asyncio.Semaphore(max_concurrent)
             
             async def search_with_semaphore(song_name: str, artist: str):
                 async with semaphore:
                     return await self.search_song_async(session, song_name, artist)
             
-            # Create tasks for all songs
             tasks = [
                 search_with_semaphore(song_name, artist)
                 for song_name, artist in songs
             ]
             
-            # Wait for all tasks with timeout
             try:
                 responses = await asyncio.wait_for(
                     asyncio.gather(*tasks, return_exceptions=True),
                     timeout=10.0  # 10 second total timeout
                 )
                 
-                # Process results
                 for (song_name, artist), response in zip(songs, responses):
                     if isinstance(response, dict):
                         key = f"{song_name}|{artist}"

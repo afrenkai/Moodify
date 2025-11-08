@@ -86,7 +86,7 @@ export default function Home() {
 		try {
 			const request: any = {
 				num_results: numTracks,
-				include_collage: true,
+				enrich_with_lyrics: false,
 			};
 
 			if (generationMode === 'emotion' || generationMode === 'both') {
@@ -127,8 +127,11 @@ export default function Home() {
 							🎵 EmoRec
 						</h1>
 						<p className="text-xl text-zinc-400 max-w-2xl mx-auto">
-							Discover music that matches your emotions. Powered by AI-driven mood
-							analysis and Spotify.
+							Discover music that matches your emotions. Powered by AI semantic
+							understanding of mood and context.
+						</p>
+						<p className="text-sm text-zinc-500 mt-2 max-w-2xl mx-auto">
+							🎭 Uses semantic embeddings to match emotional vibes, not just genre or artist similarity
 						</p>
 					</div>
 
@@ -182,9 +185,12 @@ export default function Home() {
 					{/* Seed Songs Input */}
 					{(generationMode === 'songs' || generationMode === 'both') && (
 						<div className="mb-8 max-w-3xl mx-auto">
-							<h3 className="text-lg font-semibold text-white mb-4 text-center">
+							<h3 className="text-lg font-semibold text-white mb-2 text-center">
 								Add Seed Songs
 							</h3>
+							<p className="text-sm text-zinc-400 mb-4 text-center">
+								🎭 We'll find songs with similar emotional vibe and mood using AI embeddings
+							</p>
 							<div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
 								{/* Autocomplete Input */}
 								<div className="mb-4">
@@ -271,7 +277,7 @@ export default function Home() {
 			{/* Results Section */}
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 				{isLoading && (
-					<LoadingSpinner message="Creating your perfect playlist..." />
+					<LoadingSpinner message="Finding songs with matching emotional vibes..." />
 				)}
 
 				{!isLoading && playlistData && (
@@ -297,84 +303,6 @@ export default function Home() {
 								}}
 							/>
 						</div>
-
-						{/* Generation Info */}
-						<div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
-							<h3 className="text-lg font-semibold text-white mb-4">
-								Generation Info
-							</h3>
-							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-								{generationMode && (
-									<div className="flex flex-col">
-										<span className="text-sm text-zinc-400 mb-1">Mode</span>
-										<span className="text-white font-medium capitalize">{generationMode}</span>
-									</div>
-								)}
-								{selectedEmotion && (
-									<div className="flex flex-col">
-										<span className="text-sm text-zinc-400 mb-1">Emotion</span>
-										<span className="text-white font-medium capitalize">{selectedEmotion}</span>
-									</div>
-								)}
-								{seedSongs.length > 0 && (
-									<div className="flex flex-col">
-										<span className="text-sm text-zinc-400 mb-1">Seed Songs</span>
-										<span className="text-white font-medium">{seedSongs.length} tracks</span>
-									</div>
-								)}
-							</div>
-							{seedSongs.length > 0 && (
-								<div className="mt-4">
-									<div className="text-sm text-zinc-400 mb-2">Based on:</div>
-									<div className="flex flex-wrap gap-2">
-										{seedSongs.map((song, i) => (
-											<span
-												key={i}
-												className="px-3 py-1 rounded-full bg-white/10 text-white text-sm"
-											>
-												{song.song_name} - {song.artist}
-											</span>
-										))}
-									</div>
-								</div>
-							)}
-						</div>
-
-						{/* Audio Features Summary */}
-						{playlistData.emotion_features && (
-							<div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
-								<h3 className="text-lg font-semibold text-white mb-4">
-									Target Audio Features
-								</h3>
-								<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-									{Object.entries(playlistData.emotion_features).map(
-										([feature, value]) => (
-											<div key={feature} className="flex flex-col">
-												<span className="text-sm text-zinc-400 capitalize mb-1">
-													{feature}
-												</span>
-												<div className="flex items-center gap-2">
-													<div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
-														<div
-															className="h-full bg-green-500 rounded-full transition-all"
-															style={{
-																width: `${typeof value === 'number' ? value * 100 : 50}%`,
-															}}
-														/>
-													</div>
-													<span className="text-xs text-white font-mono">
-														{typeof value === 'number'
-															? (value * 100).toFixed(0)
-															: value}
-														%
-													</span>
-												</div>
-											</div>
-										)
-									)}
-								</div>
-							</div>
-						)}
 					</div>
 				)}
 
@@ -385,10 +313,14 @@ export default function Home() {
 						<h3 className="text-2xl font-semibold text-white mb-2">
 							Ready to discover your soundtrack?
 						</h3>
-						<p className="text-zinc-400">
-							{generationMode === 'emotion' && 'Select emotion(s) above and generate your personalized playlist'}
-							{generationMode === 'songs' && 'Add some seed songs above and generate your personalized playlist'}
-							{generationMode === 'both' && 'Select emotion(s) and add seed songs above to generate your personalized playlist'}
+						<p className="text-zinc-400 mb-4">
+							{generationMode === 'emotion' && 'Select emotion(s) above and generate your mood-based playlist'}
+							{generationMode === 'songs' && 'Add seed songs - we\'ll find music with similar emotional vibes'}
+							{generationMode === 'both' && 'Select emotion(s) and add seed songs for precise mood matching'}
+						</p>
+						<p className="text-xs text-zinc-500 max-w-md mx-auto">
+							💡 Our AI uses semantic embeddings to understand emotional context,
+							finding songs that match the vibe across different genres and artists
 						</p>
 					</div>
 				)}

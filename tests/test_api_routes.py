@@ -144,34 +144,10 @@ class TestGeneratePlaylistEndpoint:
         assert "emotion_features" in data
         assert len(data["playlist"]) > 0
     
-    def test_generate_playlist_with_collage(self, client):
-        """Test generating playlist with mood collage."""
-        request_data = {
-            "emotion": ["romantic"],
-            "num_results": 5,
-            "include_collage": True,
-            "enrich_with_lyrics": False
-        }
-        
-        response = client.post("/api/v1/generate-playlist", json=request_data)
-        
-        assert response.status_code == 200
-        data = response.json()
-        assert "playlist" in data
-        assert "mood_collage" in data
-        
-        if data["mood_collage"]:
-            collage = data["mood_collage"]
-            assert "image_base64" in collage
-            assert "dominant_colors" in collage
-            assert "width" in collage
-            assert "height" in collage
-    
     def test_generate_playlist_without_inputs(self, client):
         """Test that generating playlist without inputs returns error."""
         request_data = {
-            "num_results": 10,
-            "include_collage": False
+            "num_results": 10
         }
         
         response = client.post("/api/v1/generate-playlist", json=request_data)
@@ -182,8 +158,7 @@ class TestGeneratePlaylistEndpoint:
         """Test with invalid num_results."""
         request_data = {
             "emotion": ["happy"],
-            "num_results": 100,  # Over limit
-            "include_collage": False
+            "num_results": 100
         }
         
         response = client.post("/api/v1/generate-playlist", json=request_data)
@@ -196,7 +171,6 @@ class TestGeneratePlaylistEndpoint:
         request_data = {
             "emotion": ["energetic"],
             "num_results": 5,
-            "include_collage": False,
             "enrich_with_lyrics": False
         }
         

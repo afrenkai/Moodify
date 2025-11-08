@@ -6,7 +6,6 @@ from backend.models.schemas import (
     SongInput,
     PlaylistRequest,
     SongResult,
-    MoodCollage,
     PlaylistResponse,
     HealthResponse,
     SpotifyTrackInfo
@@ -109,7 +108,6 @@ class TestPlaylistRequest:
         request = PlaylistRequest(emotion=["calm"])
         
         assert request.num_results == 10
-        assert request.include_collage is True
         assert request.enrich_with_lyrics is False
     
     def test_playlist_request_num_results_validation(self):
@@ -155,11 +153,9 @@ class TestPlaylistRequest:
         """Test boolean flags in PlaylistRequest."""
         request = PlaylistRequest(
             emotion=["romantic"],
-            include_collage=False,
             enrich_with_lyrics=True
         )
         
-        assert request.include_collage is False
         assert request.enrich_with_lyrics is True
 
 
@@ -220,37 +216,6 @@ class TestSongResult:
         assert song.similarity_score == 1.0
 
 
-class TestMoodCollage:
-    """Test suite for MoodCollage schema."""
-    
-    def test_mood_collage_valid(self):
-        """Test creating a valid MoodCollage."""
-        collage = MoodCollage(
-            image_base64="base64encodedstring",
-            dominant_colors=["#FF5733", "#33FF57", "#3357FF"],
-            visual_params={"param1": "value1", "param2": 42},
-            width=800,
-            height=600
-        )
-        
-        assert collage.image_base64 == "base64encodedstring"
-        assert len(collage.dominant_colors) == 3
-        assert collage.width == 800
-        assert collage.height == 600
-    
-    def test_mood_collage_empty_colors(self):
-        """Test MoodCollage with empty colors list."""
-        collage = MoodCollage(
-            image_base64="data",
-            dominant_colors=[],
-            visual_params={},
-            width=800,
-            height=600
-        )
-        
-        assert len(collage.dominant_colors) == 0
-
-
 class TestPlaylistResponse:
     """Test suite for PlaylistResponse schema."""
     
@@ -267,7 +232,6 @@ class TestPlaylistResponse:
         )
         
         assert len(response.playlist) == 1
-        assert response.mood_collage is None
         assert response.emotion_features is None
     
     def test_playlist_response_with_all_fields(self):
@@ -281,23 +245,13 @@ class TestPlaylistResponse:
             for i in range(5)
         ]
         
-        collage = MoodCollage(
-            image_base64="base64string",
-            dominant_colors=["#FF5733"],
-            visual_params={"test": "value"},
-            width=800,
-            height=600
-        )
-        
         response = PlaylistResponse(
             playlist=songs,
-            mood_collage=collage,
             emotion_features={"valence": 0.7, "energy": 0.8},
             combined_embedding=[0.1, 0.2, 0.3, 0.4, 0.5]
         )
         
         assert len(response.playlist) == 5
-        assert response.mood_collage is not None
         assert response.emotion_features is not None
         assert len(response.combined_embedding) == 5
     

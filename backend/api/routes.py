@@ -6,11 +6,9 @@ from backend.models.schemas import (
     PlaylistRequest,
     PlaylistResponse,
     SongResult,
-    MoodCollage,
     HealthResponse
 )
 from backend.services.playlist_generator import PlaylistGenerator
-from backend.services.mood_collage_generator import MoodCollageGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -19,16 +17,6 @@ router = APIRouter()
 
 @router.post("/generate-playlist", response_model=PlaylistResponse)
 async def generate_playlist(request: PlaylistRequest, fastapi_request: Request):
-    """
-    Generate a playlist based on user input songs and/or emotion.
-    
-    This endpoint:
-    1. Computes embeddings for input songs
-    2. Maps emotion to audio feature ranges
-    3. Combines embeddings with emotion context
-    4. Queries and ranks songs
-    5. Optionally generates mood collage image
-    """
     try:
         embedding_service = fastapi_request.app.state.embedding_service
         emotion_mapper = fastapi_request.app.state.emotion_mapper
@@ -42,7 +30,17 @@ async def generate_playlist(request: PlaylistRequest, fastapi_request: Request):
             genius_service=genius_service
         )
         
-        logger.info(f"Generating playlist: {len(request.songs or [])} songs, emotion: {request.emotion}")
+        emotion_display = "none"
+        if request.emotion:
+            if isinstance(request.emotion, list):
+                emotion_display = f"[{', '.join(request.emotion)}]"
+            else:
+                emotion_display = request.emotion
+        
+        logger.info(
+            f"Generating playlist: {len(request.songs or [])} songs, "
+            f"emotion(s): {emotion_display}"
+        )
         
         playlist, combined_embedding, emotion_features = playlist_generator.generate_playlist(
             songs=request.songs,
@@ -51,28 +49,8 @@ async def generate_playlist(request: PlaylistRequest, fastapi_request: Request):
             enrich_with_lyrics=request.enrich_with_lyrics
         )
         
-        mood_collage = None
-        if request.include_collage:
-            logger.info("Generating mood collage")
-            collage_generator = MoodCollageGenerator()
-            # Convert emotion list to string for collage generation
-            emotion_str = " ".join(request.emotion) if request.emotion else None
-            image_base64, dominant_colors, visual_params = collage_generator.generate_collage(
-                combined_embedding,
-                emotion_str
-            )
-            
-            mood_collage = MoodCollage(
-                image_base64=image_base64,
-                dominant_colors=dominant_colors,
-                visual_params=visual_params,
-                width=collage_generator.width,
-                height=collage_generator.height
-            )
-        
         emotion_features_list = None
         if emotion_features:
-            # Convert tuples (min, max) to midpoint values for display
             emotion_features_list = {
                 key: (value[0] + value[1]) / 2 if isinstance(value, (tuple, list)) and len(value) == 2 else value
                 for key, value in emotion_features.items()
@@ -80,9 +58,8 @@ async def generate_playlist(request: PlaylistRequest, fastapi_request: Request):
         
         response = PlaylistResponse(
             playlist=playlist,
-            mood_collage=mood_collage,
             emotion_features=emotion_features_list,
-            combined_embedding=combined_embedding.tolist()[:10]  # First 10 dims for debugging
+            combined_embedding=combined_embedding.tolist()[:10]
         )
         
         logger.info(f"Successfully generated playlist with {len(playlist)} songs")
@@ -119,12 +96,32 @@ async def health_check(request: Request):
 
 
 @router.get("/emotions")
-async def list_emotions():
+async def list_emotions(request: Request):
     from backend.models.schemas import EmotionType
     
+    predefined = [emotion.value for emotion in EmotionType]
+    
+    learned = []
+    try:
+        emotion_mapper = request.app.state.emotion_mapper
+        if hasattr(emotion_mapper, 'llm_emotion_service') and emotion_mapper.llm_emotion_service:
+            learned = emotion_mapper.llm_emotion_service.get_learned_emotions()
+    except Exception as e:
+        logger.debug(f"Could not retrieve learned emotions: {e}")
+    
     return {
-        "emotions": [emotion.value for emotion in EmotionType],
-        "note": "You can also use custom emotion descriptions"
+        "predefined_emotions": predefined,
+        "learned_emotions": learned,
+        "note": "You can use any emotion word - the system will learn its meaning through AI contextual understanding",
+        "multi_emotion_support": True,
+        "examples": [
+            "happy",
+            "sad and hopeful",
+            "energetic melancholic",
+            "nostalgic",
+            "bittersweet",
+            "euphoric"
+        ]
     }
 
 
@@ -135,7 +132,6 @@ async def search_spotify_track(
     limit: int = 10,
     request: Request = None
 ):
-    """Search for tracks on Spotify by name and optional artist."""
     try:
         spotify_service = request.app.state.spotify_service
         
@@ -145,7 +141,6 @@ async def search_spotify_track(
                 detail="Spotify service is not available. Check credentials."
             )
         
-        # Search using the Spotify API
         query = f"track:{song_name}"
         if artist:
             query += f" artist:{artist}"
@@ -212,7 +207,6 @@ async def get_spotify_recommendations(
                 detail="Spotify service is not available"
             )
         
-        # Get target features from emotion if provided
         target_features = {}
         if emotion:
             emotion_features = emotion_mapper.get_feature_ranges(emotion)
@@ -223,7 +217,6 @@ async def get_spotify_recommendations(
                     else:
                         target_features[f'target_{key}'] = value
         
-        # Get recommendations
         recommendations = spotify_service.get_recommendations(
             seed_tracks=seed_tracks,
             limit=num_results,
