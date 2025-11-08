@@ -1,4 +1,3 @@
-"""Shared fixtures for pytest tests."""
 import pytest
 import numpy as np
 from unittest.mock import Mock, MagicMock
@@ -27,7 +26,6 @@ def mock_spotify_service():
     mock_service = Mock(spec=SpotifyService)
     mock_service.is_available.return_value = True
     
-    # Mock search_track
     mock_service.search_track.return_value = {
         'spotify_id': 'test_track_id',
         'song_name': 'Test Song',
