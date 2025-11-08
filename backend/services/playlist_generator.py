@@ -40,22 +40,30 @@ class PlaylistGenerator:
     def generate_playlist(
         self,
         songs: Optional[List[SongInput]] = None,
-        emotion: Optional[str] = None,
+        emotion: Optional[List[str]] = None,
         num_results: int = 10
     ) -> tuple[List[SongResult], np.ndarray, Dict[str, Any]]:
        
         if not songs and not emotion:
             raise ValueError("Must provide either songs or emotion")
         
-        combined_embedding = self._compute_combined_embedding(songs, emotion)
+        # Convert emotion list to single string for processing
+        emotion_str = None
+        if emotion:
+            emotion_str = " ".join(emotion) if isinstance(emotion, list) else emotion
+        
+        combined_embedding = self._compute_combined_embedding(songs, emotion_str)
         
         emotion_features = None
-        if emotion:
-            emotion_features = self.emotion_mapper.get_feature_ranges(emotion)
+        if emotion_str:
+            # For multiple emotions, use the first one for feature ranges
+            # or combine them if needed
+            primary_emotion = emotion[0] if isinstance(emotion, list) else emotion_str
+            emotion_features = self.emotion_mapper.get_feature_ranges(primary_emotion)
         
         playlist = self._query_songs(
             combined_embedding,
-            emotion,
+            emotion_str,
             emotion_features,
             num_results
         )
