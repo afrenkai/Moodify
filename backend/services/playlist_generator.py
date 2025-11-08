@@ -9,7 +9,7 @@ from backend.services.emotion_mapper import EmotionMapper
 from backend.services.spotify_service import SpotifyService
 from backend.services.async_genius_service import AsyncGeniusService
 from backend.services.llm_search_query_generator import LLMSearchQueryGenerator
-from backend.models.schemas import SongInput, SongResult
+from backend.models.schemas import SongInput, SongResult, ArtistInput
 
 logger = logging.getLogger(__name__)
 
@@ -31,11 +31,9 @@ class PlaylistGenerator:
         self.songs_db_path = songs_db_path
         self.songs_df: Optional[pd.DataFrame] = None
         
-        # Initialize query generator with Spotify service for runtime genre corpus
         self.query_generator = LLMSearchQueryGenerator(spotify_service=spotify_service)
         logger.info("Playlist generator using LLM-powered dynamic query generation with runtime genre filtering")
         
-        # Load genre corpus from Spotify if available
         if spotify_service and spotify_service.is_available():
             success = self.query_generator.load_genre_corpus_from_spotify()
             if success:
@@ -67,15 +65,15 @@ class PlaylistGenerator:
     def generate_playlist(
         self,
         songs: Optional[List[SongInput]] = None,
+        artists: Optional[List[ArtistInput]] = None,
         emotion: Optional[List[str]] = None,
         num_results: int = 10,
         enrich_with_lyrics: bool = True  # Changed default to True
     ) -> tuple[List[SongResult], np.ndarray, Dict[str, Any]]:
        
-        if not songs and not emotion:
-            raise ValueError("Must provide either songs or emotion")
+        if not songs and not artists and not emotion:
+            raise ValueError("Must provide either songs, artists, or emotion")
         
-        # Handle both single emotion and list of emotions
         emotion_str = None
         emotion_list = None
         if emotion:
@@ -87,16 +85,16 @@ class PlaylistGenerator:
                 emotion_str = emotion
                 emotion_list = [emotion]
         
-        combined_embedding = self._compute_combined_embedding(songs, emotion_str)
+        combined_embedding = self._compute_combined_embedding(songs, artists, emotion_str)
         
         emotion_features = None
         if emotion_list:
-            # Pass the full list to emotion mapper for intelligent blending
             emotion_features = self.emotion_mapper.get_feature_ranges(emotion_list)
         
         if self.spotify_service and self.spotify_service.is_available():
             playlist = self._query_songs_with_spotify(
                 songs,
+                artists,
                 combined_embedding,
                 emotion_str,
                 emotion_features,
@@ -116,13 +114,13 @@ class PlaylistGenerator:
     def _compute_combined_embedding(
         self,
         songs: Optional[List[SongInput]],
+        artists: Optional[List[ArtistInput]],
         emotion: Optional[str]
     ) -> np.ndarray:
         
         embeddings = []
         weights = []
         
-       
         if songs:
             for song in songs:
                 song_emb = self.embedding_service.encode_song(
@@ -134,11 +132,52 @@ class PlaylistGenerator:
             song_weight = 0.7 if emotion else 1.0
             weights.extend([song_weight / len(songs)] * len(songs))
         
+        if artists and self.spotify_service:
+            logger.info(f"Fetching tracks (including collabs) for {len(artists)} artists")
+            for artist in artists:
+                if artist.spotify_id:
+                    artist_id = artist.spotify_id
+                    artist_name = artist.artist_name
+                else:
+                    artist_results = self.spotify_service.search_artist(artist.artist_name, limit=1)
+                    if artist_results:
+                        artist_id = artist_results[0]['spotify_id']
+                        artist_name = artist_results[0]['name']
+                    else:
+                        logger.warning(f"Could not find artist: {artist.artist_name}")
+                        continue
+                
+                # Get tracks including collaborations for this artist
+                artist_tracks = self.spotify_service.get_artist_tracks_including_collabs(
+                    artist_id, 
+                    artist_name,
+                    limit=8  # Get more tracks to better represent their style
+                )
+                
+                if artist_tracks:
+                    artist_track_embeddings = []
+                    for track in artist_tracks:
+                        track_emb = self.embedding_service.encode_song(
+                            track['song_name'],
+                            track['artist']
+                        )
+                        artist_track_embeddings.append(track_emb)
+                    
+                    artist_avg_emb = np.mean(artist_track_embeddings, axis=0)
+                    embeddings.append(artist_avg_emb)
+                    
+                    artist_weight = 0.7 if emotion else 1.0
+                    weights.append(artist_weight / len(artists))
+                    logger.info(
+                        f"Added embedding for artist {artist_name} based on "
+                        f"{len(artist_tracks)} tracks (including collabs)"
+                    )
+        
         if emotion:
             emotion_emb = self.embedding_service.encode_emotion(emotion)
             embeddings.append(emotion_emb)
             
-            emotion_weight = 0.3 if songs else 1.0
+            emotion_weight = 0.3 if (songs or artists) else 1.0
             weights.append(emotion_weight)
         
         combined = self.embedding_service.combine_embeddings(embeddings, weights)
@@ -149,6 +188,7 @@ class PlaylistGenerator:
     def _query_songs_with_spotify(
         self,
         songs: Optional[List[SongInput]],
+        artists: Optional[List[ArtistInput]],
         query_embedding: np.ndarray,
         emotion: Optional[str],
         emotion_features: Optional[Dict],
@@ -159,7 +199,7 @@ class PlaylistGenerator:
         try:
             seed_track_ids = []
             if songs:
-                for song in songs[:5]:  # Max 5 seeds for Spotify
+                for song in songs[:5]:
                     if song.spotify_id:
                         seed_track_ids.append(song.spotify_id)
                     else:
@@ -167,21 +207,69 @@ class PlaylistGenerator:
                         if track and track.get('spotify_id'):
                             seed_track_ids.append(track['spotify_id'])
             
-            if seed_track_ids or songs:
-                logger.info("Using LLM to generate search queries based on seed songs and mood")
+            if artists:
+                for artist in artists:
+                    if len(seed_track_ids) >= 5:
+                        break
+                    
+                    artist_id = artist.spotify_id
+                    artist_name = artist.artist_name
+                    if not artist_id:
+                        artist_results = self.spotify_service.search_artist(artist.artist_name, limit=1)
+                        if artist_results:
+                            artist_id = artist_results[0]['spotify_id']
+                            artist_name = artist_results[0]['name']
+                    
+                    if artist_id:
+                        # Use tracks including collabs for seed track IDs
+                        artist_tracks = self.spotify_service.get_artist_tracks_including_collabs(
+                            artist_id, 
+                            artist_name, 
+                            limit=3
+                        )
+                        for track in artist_tracks[:2]:
+                            if len(seed_track_ids) >= 5:
+                                break
+                            seed_track_ids.append(track['spotify_id'])
+            
+            if seed_track_ids or songs or artists:
+                logger.info("Using LLM to generate search queries based on seed songs/artists and mood")
                 search_queries = []
                 
-                if songs:
+                if songs or artists:
                     if emotion:
-                        logger.info(f"Using LLM to generate queries for emotion '{emotion}' with seed song context")
+                        logger.info(f"Using LLM to generate queries for emotion '{emotion}' with seed context")
                         emotion_queries = self.query_generator.generate_queries_for_emotion(
                             emotion,
                             num_queries=6
                         )
                         search_queries.extend(emotion_queries)
                     else:
-                        logger.info("Using LLM to infer mood from seed songs and generate queries")
-                        seed_tuples = [(s.song_name, s.artist) for s in songs]
+                        logger.info("Using LLM to infer mood from seed songs/artists and generate queries")
+                        seed_tuples = []
+                        
+                        if songs:
+                            seed_tuples.extend([(s.song_name, s.artist) for s in songs])
+                        
+                        if artists:
+                            for artist in artists:
+                                artist_id = artist.spotify_id
+                                artist_name = artist.artist_name
+                                if not artist_id:
+                                    artist_results = self.spotify_service.search_artist(artist.artist_name, limit=1)
+                                    if artist_results:
+                                        artist_id = artist_results[0]['spotify_id']
+                                        artist_name = artist_results[0]['name']
+                                
+                                if artist_id:
+                                    # Use tracks including collabs to better represent artist style
+                                    artist_tracks = self.spotify_service.get_artist_tracks_including_collabs(
+                                        artist_id, 
+                                        artist_name, 
+                                        limit=4
+                                    )
+                                    for track in artist_tracks[:2]:
+                                        seed_tuples.append((track['song_name'], track['artist']))
                         
                         inferred_emotions = self.query_generator.infer_emotion_from_seeds(
                             seed_tuples,
@@ -204,8 +292,6 @@ class PlaylistGenerator:
             elif emotion:
                 logger.info(f"Using LLM to generate GENRE queries for emotion: '{emotion}' (semantic matching happens AFTER)")
                 
-                # Use runtime genre filtering to eliminate irrelevant genres
-                # This searches the Spotify genre corpus and filters at runtime
                 emotion_queries = self.query_generator.generate_queries_for_emotion(
                     emotion,
                     num_queries=8,
@@ -213,18 +299,17 @@ class PlaylistGenerator:
                     use_runtime_filtering=True  # Enable runtime corpus filtering
                 )
                 
-                # Queries are now genre-only (no mood keywords) and filtered to relevant genres
                 logger.info(f"Using runtime-filtered genre queries: {emotion_queries[:3]}...")
                 spotify_tracks = self.spotify_service.search_by_multiple_queries(
                     queries=emotion_queries,
-                    limit_per_query=30  # Get more candidates for semantic filtering
+                    limit_per_query=30
                 )
             else:
                 spotify_tracks = []
             
             if spotify_tracks:
                 seen_track_ids = set()
-                seen_track_combos = set()  # Track (song_name, artist) combinations
+                seen_track_combos = set()
                 playlist = []
                 
                 for track_data in spotify_tracks:
@@ -252,14 +337,12 @@ class PlaylistGenerator:
                         self.embedding_service.compute_similarity(query_embedding, track_embedding)
                     )
                     
-                    # Apply strong penalty for literal title matches (not semantic!)
                     literal_match_penalty = 0.0
                     if emotion:
                         title_lower = track_data['song_name'].lower()
                         emotion_words = emotion.lower().split()
                         for emotion_word in emotion_words:
                             if len(emotion_word) > 3 and emotion_word in title_lower:
-                                # Strong penalty - these are usually not semantic matches
                                 literal_match_penalty = 0.35
                                 logger.debug(
                                     f"STRONG literal match penalty for '{track_data['song_name']}': "
@@ -267,12 +350,10 @@ class PlaylistGenerator:
                                 )
                                 break
                     
-                    # Penalize overly popular songs to promote diversity and hidden gems
                     popularity_penalty = 0.0
                     popularity = track_data.get('popularity', 50)
-                    if popularity > 75:
-                        # Songs with 75+ popularity get penalized (0.0 to 0.15)
-                        popularity_penalty = (popularity - 75) / 100 * 0.15
+                    if popularity > 5:
+                        popularity_penalty = (popularity - 5) / 100 * 0.15
                         logger.debug(
                             f"Popularity penalty for '{track_data['song_name']}': "
                             f"pop={popularity}, penalty={popularity_penalty:.3f}"
@@ -295,7 +376,6 @@ class PlaylistGenerator:
                                 context="song"
                             )
                             
-                            # Weight: 40% song/artist embedding + 60% emotion understanding
                             similarity_score = (
                                 similarity_score * 0.4 +
                                 emotion_similarity * 0.6 -
@@ -332,7 +412,7 @@ class PlaylistGenerator:
                 if len(playlist) > num_results:
                     final_playlist = []
                     artist_count = {}
-                    max_per_artist = 2  # Limit tracks per artist
+                    max_per_artist = 2
                     
                     for track in playlist:
                         artist = track.artist.lower()

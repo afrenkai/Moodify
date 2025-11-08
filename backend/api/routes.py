@@ -39,11 +39,13 @@ async def generate_playlist(request: PlaylistRequest, fastapi_request: Request):
         
         logger.info(
             f"Generating playlist: {len(request.songs or [])} songs, "
+            f"{len(request.artists or [])} artists, "
             f"emotion(s): {emotion_display}"
         )
         
         playlist, combined_embedding, emotion_features = playlist_generator.generate_playlist(
             songs=request.songs,
+            artists=request.artists,
             emotion=request.emotion,
             num_results=request.num_results,
             enrich_with_lyrics=request.enrich_with_lyrics
@@ -163,9 +165,63 @@ async def search_spotify_track(
         raise HTTPException(status_code=500, detail="Failed to search Spotify")
 
 
+@router.get("/spotify/artist/search")
+async def search_spotify_artist(
+    artist_name: str,
+    limit: int = 10,
+    request: Request = None
+):
+    try:
+        spotify_service = request.app.state.spotify_service
+        
+        if not spotify_service.is_available():
+            raise HTTPException(
+                status_code=503,
+                detail="Spotify service is not available. Check credentials."
+            )
+        
+        artists = spotify_service.search_artist(artist_name, limit=min(limit, 50))
+        
+        return {"artists": artists}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error searching artists on Spotify: {e}")
+        raise HTTPException(status_code=500, detail="Failed to search artists")
+
+
+@router.get("/spotify/artist/{artist_id}/top-tracks")
+async def get_artist_top_tracks(
+    artist_id: str,
+    limit: int = 10,
+    request: Request = None
+):
+    try:
+        spotify_service = request.app.state.spotify_service
+        
+        if not spotify_service.is_available():
+            raise HTTPException(
+                status_code=503,
+                detail="Spotify service is not available"
+            )
+        
+        tracks = spotify_service.get_artist_top_tracks(artist_id, limit=limit)
+        
+        if not tracks:
+            raise HTTPException(status_code=404, detail="No tracks found for this artist")
+        
+        return {"tracks": tracks}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting artist top tracks: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get artist top tracks")
+
+
 @router.get("/spotify/track/{track_id}")
 async def get_spotify_track(track_id: str, request: Request):
-    """Get detailed information about a Spotify track."""
     try:
         spotify_service = request.app.state.spotify_service
         
@@ -189,48 +245,4 @@ async def get_spotify_track(track_id: str, request: Request):
         raise HTTPException(status_code=500, detail="Failed to get track")
 
 
-@router.post("/spotify/recommendations")
-async def get_spotify_recommendations(
-    seed_tracks: Optional[List[str]] = None,
-    emotion: Optional[str] = None,
-    num_results: int = 20,
-    request: Request = None
-):
-    """Get Spotify recommendations based on seed tracks and/or emotion."""
-    try:
-        spotify_service = request.app.state.spotify_service
-        emotion_mapper = request.app.state.emotion_mapper
-        
-        if not spotify_service.is_available():
-            raise HTTPException(
-                status_code=503,
-                detail="Spotify service is not available"
-            )
-        
-        target_features = {}
-        if emotion:
-            emotion_features = emotion_mapper.get_feature_ranges(emotion)
-            if emotion_features:
-                for key, value in emotion_features.items():
-                    if isinstance(value, (tuple, list)) and len(value) == 2:
-                        target_features[f'target_{key}'] = (value[0] + value[1]) / 2
-                    else:
-                        target_features[f'target_{key}'] = value
-        
-        recommendations = spotify_service.get_recommendations(
-            seed_tracks=seed_tracks,
-            limit=num_results,
-            **target_features
-        )
-        
-        return {
-            "recommendations": recommendations,
-            "count": len(recommendations)
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error getting recommendations: {e}")
-        raise HTTPException(status_code=500, detail="Failed to get recommendations")
 
