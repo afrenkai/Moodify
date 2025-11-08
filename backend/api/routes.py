@@ -50,9 +50,11 @@ async def generate_playlist(request: PlaylistRequest, fastapi_request: Request):
         if request.include_collage:
             logger.info("Generating mood collage")
             collage_generator = MoodCollageGenerator()
+            # Convert emotion list to string for collage generation
+            emotion_str = " ".join(request.emotion) if request.emotion else None
             image_base64, dominant_colors, visual_params = collage_generator.generate_collage(
                 combined_embedding,
-                request.emotion
+                emotion_str
             )
             
             mood_collage = MoodCollage(
@@ -65,8 +67,10 @@ async def generate_playlist(request: PlaylistRequest, fastapi_request: Request):
         
         emotion_features_list = None
         if emotion_features:
+            # Convert tuples (min, max) to midpoint values for display
             emotion_features_list = {
-                key: list(value) for key, value in emotion_features.items()
+                key: (value[0] + value[1]) / 2 if isinstance(value, (tuple, list)) and len(value) == 2 else value
+                for key, value in emotion_features.items()
             }
         
         response = PlaylistResponse(
